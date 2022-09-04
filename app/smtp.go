@@ -12,7 +12,7 @@ import (
 
 // Information on SMTP session.
 type SmtpSession struct {
-	storage MessageStorage
+	storage *Storage
 }
 
 func (session *SmtpSession) Mail(from string, opts smtp.MailOptions) error {
@@ -33,7 +33,7 @@ func (session *SmtpSession) Data(reader io.Reader) error {
 			RawData: string(buffer),
 		}
 
-		session.storage.Add(message)
+		session.storage.Backend.Add(message)
 	}
 
 	return nil
@@ -50,7 +50,7 @@ func (session *SmtpSession) Logout() error {
 
 // Custom SMTP backend.
 type SmtpBackend struct {
-	storage MessageStorage
+	storage *Storage
 }
 
 func (backend *SmtpBackend) AnonymousLogin(_ *smtp.ConnectionState) (smtp.Session, error) {
@@ -68,7 +68,7 @@ func (backend *SmtpBackend) Login(_ *smtp.ConnectionState, username string, pass
 // Starts SMTP backend and handles it's termination.
 type SmtpServer struct {
 	// Storage for received messages.
-	storage MessageStorage
+	storage *Storage
 }
 
 // Wires-up SMTP server.
@@ -105,7 +105,7 @@ func (srv *SmtpServer) Start(ctx context.Context, waitGroup *sync.WaitGroup) {
 }
 
 // Creates new SMTP server
-func NewSmtpServer(storage MessageStorage) *SmtpServer {
+func NewSmtpServer(storage *Storage) *SmtpServer {
 	return &SmtpServer{
 		storage: storage,
 	}

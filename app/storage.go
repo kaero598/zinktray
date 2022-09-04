@@ -1,9 +1,9 @@
 package app
 
-// Interface for arbitrary message storage.
+// Interface for arbitrary message storage backend.
 //
 // Libraries may extends this to implement their own storage.
-type MessageStorage interface {
+type StorageBackend interface {
 	// Add new message to storage.
 	Add(msg Message)
 
@@ -14,21 +14,27 @@ type MessageStorage interface {
 	GetAll() []Message
 }
 
+// Central storage for everything mail
+type Storage struct {
+	// Storage backend that stores messages
+	Backend StorageBackend
+}
+
 // In-memory storage.
 //
 // Stored messages are lost upon application restart.
-type MemoryStorage struct {
+type MemoryStorageBackend struct {
 	messages []Message
 }
 
-func (storage *MemoryStorage) Add(msg Message) {
+func (storage *MemoryStorageBackend) Add(msg Message) {
 	storage.messages = append(storage.messages, msg)
 }
 
-func (storage *MemoryStorage) Count() int {
+func (storage *MemoryStorageBackend) Count() int {
 	return len(storage.messages)
 }
 
-func (storage *MemoryStorage) GetAll() []Message {
+func (storage *MemoryStorageBackend) GetAll() []Message {
 	return storage.messages
 }

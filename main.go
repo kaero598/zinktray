@@ -6,7 +6,9 @@ import (
 )
 
 func main() {
-	storage := &app.MemoryStorage{}
+	storage := &app.Storage{
+		Backend: &app.MemoryStorageBackend{},
+	}
 
 	smtpServer := app.NewSmtpServer(storage)
 	webServer := app.NewWebServer(storage)
