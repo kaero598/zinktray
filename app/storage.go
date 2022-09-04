@@ -14,10 +14,23 @@ type StorageBackend interface {
 	GetAll() []Message
 }
 
-// Central storage for everything mail
+// Central storage for everything mail.
 type Storage struct {
-	// Storage backend that stores messages
+	// Storage backend that stores messages.
 	Backend StorageBackend
+
+	// Index of all available mailboxes.
+	MailboxIndex MailboxIndex
+}
+
+// Creates new central storage.
+func NewStorage(backend StorageBackend) *Storage {
+	return &Storage{
+		Backend: backend,
+		MailboxIndex: MailboxIndex{
+			mailboxes: make(map[string]void),
+		},
+	}
 }
 
 // In-memory storage.

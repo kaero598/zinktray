@@ -21,6 +21,21 @@ type RequestHandler struct {
 	storage *Storage
 }
 
+// Returns JSON-formatted list of IDs of all available mailboxes.
+func (handler *RequestHandler) GetMailboxList(response http.ResponseWriter, request *http.Request) {
+	publishList := make([]string, 0, handler.storage.MailboxIndex.Count())
+	publishList = append(publishList, handler.storage.MailboxIndex.GetAll()...)
+
+	if encoded, err := json.Marshal(publishList); err != nil {
+		log.Printf("Cannot encode mailbox list: %s\n", err)
+
+		response.WriteHeader(http.StatusInternalServerError)
+	} else {
+		response.Header().Add("Content-Type", "application/json")
+		response.Write(encoded)
+	}
+}
+
 // Returns JSON-formatted list of all stored messages.
 func (handler *RequestHandler) GetMessageList(response http.ResponseWriter, request *http.Request) {
 	publishList := make([]PublishedMessage, 0, handler.storage.Backend.Count())
@@ -54,6 +69,7 @@ func (srv *WebServer) AddHandlers() {
 		storage: srv.storage,
 	}
 
+	http.Handle("/api/mailboxes", http.HandlerFunc(handler.GetMailboxList))
 	http.Handle("/api/messages", http.HandlerFunc(handler.GetMessageList))
 }
 

@@ -12,7 +12,11 @@ import (
 
 // Information on SMTP session.
 type SmtpSession struct {
+	// Central message storage.
 	storage *Storage
+
+	// ID of authenticated mailbox.
+	mailboxId string
 }
 
 func (session *SmtpSession) Mail(from string, opts smtp.MailOptions) error {
@@ -34,6 +38,7 @@ func (session *SmtpSession) Data(reader io.Reader) error {
 		}
 
 		session.storage.Backend.Add(message)
+		session.storage.MailboxIndex.Add(session.mailboxId)
 	}
 
 	return nil
@@ -50,6 +55,7 @@ func (session *SmtpSession) Logout() error {
 
 // Custom SMTP backend.
 type SmtpBackend struct {
+	// Central message storage
 	storage *Storage
 }
 
@@ -60,7 +66,7 @@ func (backend *SmtpBackend) AnonymousLogin(_ *smtp.ConnectionState) (smtp.Sessio
 
 func (backend *SmtpBackend) Login(_ *smtp.ConnectionState, username string, password string) (smtp.Session, error) {
 	// Allow any login since there are no mechanics to utilize it yet.
-	return &SmtpSession{storage: backend.storage}, nil
+	return &SmtpSession{storage: backend.storage, mailboxId: username}, nil
 }
 
 // SMTP server.
