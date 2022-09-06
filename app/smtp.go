@@ -39,7 +39,7 @@ func (session *SmtpSession) Data(reader io.Reader) error {
 		}
 
 		session.storage.Backend.Add(message)
-		session.storage.MailboxIndex.Add(session.mailboxId)
+		session.storage.MailboxIndex.Add(session.mailboxId, &message)
 	}
 
 	return nil

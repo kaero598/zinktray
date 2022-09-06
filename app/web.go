@@ -38,9 +38,13 @@ func (handler *RequestHandler) GetMailboxList(response http.ResponseWriter, requ
 
 // Returns JSON-formatted list of all stored messages.
 func (handler *RequestHandler) GetMessageList(response http.ResponseWriter, request *http.Request) {
+	messages := handler.storage.MailboxIndex.GetMessages(
+		request.FormValue("mailbox_id"),
+	)
+
 	publishList := make([]PublishedMessage, 0, handler.storage.Backend.Count())
 
-	for _, msg := range handler.storage.Backend.GetAll() {
+	for _, msg := range messages {
 		publishList = append(publishList, PublishedMessage{
 			RawData: msg.RawData,
 		})

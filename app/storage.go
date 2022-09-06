@@ -28,7 +28,7 @@ func NewStorage(backend StorageBackend) *Storage {
 	return &Storage{
 		Backend: backend,
 		MailboxIndex: MailboxIndex{
-			mailboxes: make(map[string]void),
+			mailboxes: make(map[string][]*Message),
 		},
 	}
 }
