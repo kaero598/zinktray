@@ -5,13 +5,13 @@ package app
 // Libraries may extends this to implement their own storage.
 type StorageBackend interface {
 	// Add new message to storage.
-	Add(msg Message)
+	Add(msg *Message)
 
 	// Returns the number of stored messages.
 	Count() int
 
 	// Returns a slice of all stored messages.
-	GetAll() []Message
+	GetAll() []*Message
 }
 
 // Central storage for everything mail.
@@ -37,10 +37,10 @@ func NewStorage(backend StorageBackend) *Storage {
 //
 // Stored messages are lost upon application restart.
 type MemoryStorageBackend struct {
-	messages []Message
+	messages []*Message
 }
 
-func (storage *MemoryStorageBackend) Add(msg Message) {
+func (storage *MemoryStorageBackend) Add(msg *Message) {
 	storage.messages = append(storage.messages, msg)
 }
 
@@ -48,6 +48,6 @@ func (storage *MemoryStorageBackend) Count() int {
 	return len(storage.messages)
 }
 
-func (storage *MemoryStorageBackend) GetAll() []Message {
+func (storage *MemoryStorageBackend) GetAll() []*Message {
 	return storage.messages
 }

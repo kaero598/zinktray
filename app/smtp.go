@@ -34,12 +34,10 @@ func (session *SmtpSession) Data(reader io.Reader) error {
 	if buffer, err := io.ReadAll(reader); err != nil {
 		return err
 	} else {
-		message := Message{
-			RawData: string(buffer),
-		}
+		message := NewMessage(string(buffer))
 
 		session.storage.Backend.Add(message)
-		session.storage.MailboxIndex.Add(session.mailboxId, &message)
+		session.storage.MailboxIndex.Add(session.mailboxId, message)
 	}
 
 	return nil
