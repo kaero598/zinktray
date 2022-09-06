@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log"
 	"sync"
@@ -60,12 +61,17 @@ type SmtpBackend struct {
 }
 
 func (backend *SmtpBackend) AnonymousLogin(_ *smtp.ConnectionState) (smtp.Session, error) {
-	// Anonymous login is forbidden until we decide how to deal with it.
-	return nil, smtp.ErrAuthRequired
+	// Allow anonymous login and store all messages in anonymous mailbox.
+	return &SmtpSession{storage: backend.storage}, nil
 }
 
 func (backend *SmtpBackend) Login(_ *smtp.ConnectionState, username string, password string) (smtp.Session, error) {
-	// Allow any login since there are no mechanics to utilize it yet.
+	// Forbid empty login to prevent confusion with anonymous mailbox.
+	if username == "" {
+		return nil, errors.New("Empty username is forbidden")
+	}
+
+	// Allow any other login since there are no mechanics to utilize logins yet.
 	return &SmtpSession{storage: backend.storage, mailboxId: username}, nil
 }
 
