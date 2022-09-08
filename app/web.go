@@ -23,8 +23,11 @@ type RequestHandler struct {
 
 // Returns JSON-formatted list of IDs of all available mailboxes.
 func (handler *RequestHandler) GetMailboxList(response http.ResponseWriter, request *http.Request) {
-	publishList := make([]string, 0, handler.storage.MailboxIndex.Count())
-	publishList = append(publishList, handler.storage.MailboxIndex.GetAll()...)
+	publishList := make([]string, 0, handler.storage.CountMailboxes())
+
+	for _, mailbox := range handler.storage.GetMailboxes() {
+		publishList = append(publishList, mailbox.Id)
+	}
 
 	if encoded, err := json.Marshal(publishList); err != nil {
 		log.Printf("Cannot encode mailbox list: %s\n", err)
@@ -38,13 +41,10 @@ func (handler *RequestHandler) GetMailboxList(response http.ResponseWriter, requ
 
 // Returns JSON-formatted list of all stored messages.
 func (handler *RequestHandler) GetMessageList(response http.ResponseWriter, request *http.Request) {
-	messages := handler.storage.MailboxIndex.GetMessages(
-		request.FormValue("mailbox_id"),
-	)
+	mailboxId := request.FormValue("mailbox_id")
+	publishList := make([]PublishedMessage, 0, handler.storage.CountMessages(mailboxId))
 
-	publishList := make([]PublishedMessage, 0, handler.storage.Backend.Count())
-
-	for _, msg := range messages {
+	for _, msg := range handler.storage.GetMessages(mailboxId) {
 		publishList = append(publishList, PublishedMessage{
 			RawData: msg.RawData,
 		})

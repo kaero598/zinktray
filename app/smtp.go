@@ -16,8 +16,10 @@ type SmtpSession struct {
 	// Central message storage.
 	storage *Storage
 
-	// ID of authenticated mailbox.
-	mailboxId string
+	// Name of the mailbox.
+	//
+	// Contains authenticated username or empty string for anonymous session.
+	mailboxName string
 }
 
 func (session *SmtpSession) Mail(from string, opts smtp.MailOptions) error {
@@ -36,8 +38,7 @@ func (session *SmtpSession) Data(reader io.Reader) error {
 	} else {
 		message := NewMessage(string(buffer))
 
-		session.storage.Backend.Add(message)
-		session.storage.MailboxIndex.Add(session.mailboxId, message)
+		session.storage.Add(message, session.mailboxName)
 	}
 
 	return nil
@@ -70,7 +71,7 @@ func (backend *SmtpBackend) Login(_ *smtp.ConnectionState, username string, pass
 	}
 
 	// Allow any other login since there are no mechanics to utilize logins yet.
-	return &SmtpSession{storage: backend.storage, mailboxId: username}, nil
+	return &SmtpSession{storage: backend.storage, mailboxName: username}, nil
 }
 
 // SMTP server.
