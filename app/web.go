@@ -21,6 +21,34 @@ type RequestHandler struct {
 	storage *Storage
 }
 
+// Deletes mailbox along with all its messages.
+//
+// Expects "mailbox_id" parameter (query of form). Returns HTTP 404 for unknown mailbox.
+func (handler *RequestHandler) DeleteMailbox(response http.ResponseWriter, request *http.Request) {
+	mailboxId := request.FormValue("mailbox_id")
+	mailbox := handler.storage.GetMailbox(mailboxId)
+
+	if mailbox != nil {
+		handler.storage.DeleteMailbox(mailbox.Id)
+	} else {
+		response.WriteHeader(404)
+	}
+}
+
+// Deletes message.
+//
+// Expects "message_id" parameter (query of form). Returns HTTP 404 for unknown message.
+func (handler *RequestHandler) DeleteMessage(response http.ResponseWriter, request *http.Request) {
+	messageId := request.FormValue("message_id")
+	message := handler.storage.GetMessage(messageId)
+
+	if message != nil {
+		handler.storage.DeleteMessage(message.Id)
+	} else {
+		response.WriteHeader(404)
+	}
+}
+
 // Returns JSON-formatted list of IDs of all available mailboxes.
 func (handler *RequestHandler) GetMailboxList(response http.ResponseWriter, request *http.Request) {
 	publishList := make([]string, 0, handler.storage.CountMailboxes())
@@ -73,8 +101,11 @@ func (srv *WebServer) AddHandlers() {
 		storage: srv.storage,
 	}
 
-	http.Handle("/api/mailboxes", http.HandlerFunc(handler.GetMailboxList))
-	http.Handle("/api/messages", http.HandlerFunc(handler.GetMessageList))
+	http.Handle("/api/mailboxes/delete", http.HandlerFunc(handler.DeleteMailbox))
+	http.Handle("/api/mailboxes/list", http.HandlerFunc(handler.GetMailboxList))
+
+	http.Handle("/api/messages/delete", http.HandlerFunc(handler.DeleteMessage))
+	http.Handle("/api/messages/list", http.HandlerFunc(handler.GetMessageList))
 }
 
 // Wires-up HTTP server.
