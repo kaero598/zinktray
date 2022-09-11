@@ -23,8 +23,13 @@ type RequestHandler struct {
 
 // Deletes mailbox along with all its messages.
 //
-// Expects "mailbox_id" parameter (query of form). Returns HTTP 404 for unknown mailbox.
+// Expects "mailbox_id" form parameter. Returns HTTP 404 for unknown mailbox.
 func (handler *RequestHandler) DeleteMailbox(response http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodPost {
+		response.WriteHeader(405)
+		return
+	}
+
 	mailboxId := request.FormValue("mailbox_id")
 	mailbox := handler.storage.GetMailbox(mailboxId)
 
@@ -37,8 +42,13 @@ func (handler *RequestHandler) DeleteMailbox(response http.ResponseWriter, reque
 
 // Deletes message.
 //
-// Expects "message_id" parameter (query of form). Returns HTTP 404 for unknown message.
+// Expects "message_id" form parameter. Returns HTTP 404 for unknown message.
 func (handler *RequestHandler) DeleteMessage(response http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodPost {
+		response.WriteHeader(405)
+		return
+	}
+
 	messageId := request.FormValue("message_id")
 	message := handler.storage.GetMessage(messageId)
 
