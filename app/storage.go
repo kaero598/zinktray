@@ -31,8 +31,8 @@ type Storage struct {
 
 	// Index of all messages bound to specific mailbox.
 	//
-	// The key is unique mailbox ID.
-	mailboxMessages map[string][]*Message
+	// The key is unique mailbox ID. The key of nested map is unique message ID.
+	mailboxMessages map[string]map[string]*Message
 
 	// Index of all known messages.
 	//
@@ -52,12 +52,12 @@ func (storage *Storage) Add(message *Message, mailboxName string) {
 	mailbox := storage.addMailbox(mailboxName)
 
 	if _, ok := storage.mailboxMessages[mailbox.Id]; !ok {
-		storage.mailboxMessages[mailbox.Id] = make([]*Message, 0, 1)
+		storage.mailboxMessages[mailbox.Id] = make(map[string]*Message)
 	}
 
 	storage.messages[message.Id] = message
 	storage.messageMailboxes[message.Id] = mailbox
-	storage.mailboxMessages[mailbox.Id] = append(storage.mailboxMessages[mailbox.Id], message)
+	storage.mailboxMessages[mailbox.Id][message.Id] = message
 
 	storage.Backend.Add(message)
 }
@@ -89,7 +89,13 @@ func (storage *Storage) GetMailboxes() []*Mailbox {
 
 // Returns all known messages bound to specific mailbox.
 func (storage *Storage) GetMessages(mailboxId string) []*Message {
-	if messages, ok := storage.mailboxMessages[mailboxId]; ok {
+	if mailboxMessages, ok := storage.mailboxMessages[mailboxId]; ok {
+		messages := make([]*Message, 0, len(mailboxMessages))
+
+		for _, message := range mailboxMessages {
+			messages = append(messages, message)
+		}
+
 		return messages
 	}
 
@@ -118,7 +124,7 @@ func NewStorage(backend StorageBackend) *Storage {
 		Backend:          backend,
 		mailboxes:        make(map[string]*Mailbox),
 		mailboxesByName:  make(map[string]*Mailbox),
-		mailboxMessages:  make(map[string][]*Message),
+		mailboxMessages:  make(map[string]map[string]*Message),
 		messages:         make(map[string]*Message),
 		messageMailboxes: make(map[string]*Mailbox),
 	}
