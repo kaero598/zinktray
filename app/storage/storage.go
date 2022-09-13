@@ -1,65 +1,56 @@
-package app
+package storage
 
-// Interface for arbitrary message storage backend.
-//
-// Libraries may extends this to implement their own storage.
-type StorageBackend interface {
-	// Add new message to storage.
-	Add(msg *Message)
-
-	// Returns the number of stored messages.
-	Count() int
-
-	// Returns a slice of all stored messages.
-	GetAll() []*Message
-}
+import (
+	"go-fake-smtp/app/mailbox"
+	"go-fake-smtp/app/message"
+)
 
 // Central storage for everything mail.
 type Storage struct {
-	// Storage backend that stores messages.
-	Backend StorageBackend
+	// backend responsible for storing messages.
+	backend StorageBackend
 
 	// Index of all known mailboxes.
 	//
 	// The key is unique mailbox ID.
-	mailboxes map[string]*Mailbox
+	mailboxes map[string]*mailbox.Mailbox
 
 	// Index of all known mailboxes.
 	//
 	// The key is mailbox name.
-	mailboxesByName map[string]*Mailbox
+	mailboxesByName map[string]*mailbox.Mailbox
 
 	// Index of all messages bound to specific mailbox.
 	//
 	// The key is unique mailbox ID. The key of nested map is unique message ID.
-	mailboxMessages map[string]map[string]*Message
+	mailboxMessages map[string]map[string]*message.Message
 
 	// Index of all known messages.
 	//
 	// The key is unique message ID.
-	messages map[string]*Message
+	messages map[string]*message.Message
 
 	// Index of mailboxes to which messages are bound.
 	//
 	// The key is unique message ID.
-	messageMailboxes map[string]*Mailbox
+	messageMailboxes map[string]*mailbox.Mailbox
 }
 
 // Adds new message to the storage.
 //
 // Requires name of the mailbox (not unique mailbox ID) to append message to.
-func (storage *Storage) Add(message *Message, mailboxName string) {
+func (storage *Storage) Add(msg *message.Message, mailboxName string) {
 	mailbox := storage.addMailbox(mailboxName)
 
 	if _, ok := storage.mailboxMessages[mailbox.Id]; !ok {
-		storage.mailboxMessages[mailbox.Id] = make(map[string]*Message)
+		storage.mailboxMessages[mailbox.Id] = make(map[string]*message.Message)
 	}
 
-	storage.messages[message.Id] = message
-	storage.messageMailboxes[message.Id] = mailbox
-	storage.mailboxMessages[mailbox.Id][message.Id] = message
+	storage.messages[msg.Id] = msg
+	storage.messageMailboxes[msg.Id] = mailbox
+	storage.mailboxMessages[mailbox.Id][msg.Id] = msg
 
-	storage.Backend.Add(message)
+	storage.backend.Add(msg)
 }
 
 // Returns the number of known mailboxes.
@@ -102,7 +93,7 @@ func (storage *Storage) DeleteMessage(messageId string) {
 // Returns mailbox.
 //
 // Returns nil for unknown mailbox.
-func (storage *Storage) GetMailbox(mailboxId string) *Mailbox {
+func (storage *Storage) GetMailbox(mailboxId string) *mailbox.Mailbox {
 	if mailbox, ok := storage.mailboxes[mailboxId]; ok {
 		return mailbox
 	}
@@ -111,8 +102,8 @@ func (storage *Storage) GetMailbox(mailboxId string) *Mailbox {
 }
 
 // Returns all known mailboxes.
-func (storage *Storage) GetMailboxes() []*Mailbox {
-	mailboxes := make([]*Mailbox, 0, len(storage.mailboxes))
+func (storage *Storage) GetMailboxes() []*mailbox.Mailbox {
+	mailboxes := make([]*mailbox.Mailbox, 0, len(storage.mailboxes))
 
 	for _, mailbox := range storage.mailboxes {
 		mailboxes = append(mailboxes, mailbox)
@@ -124,7 +115,7 @@ func (storage *Storage) GetMailboxes() []*Mailbox {
 // Returns message.
 //
 // Returns nil for unknown message.
-func (storage *Storage) GetMessage(messageId string) *Message {
+func (storage *Storage) GetMessage(messageId string) *message.Message {
 	if message, ok := storage.messages[messageId]; ok {
 		return message
 	}
@@ -133,9 +124,9 @@ func (storage *Storage) GetMessage(messageId string) *Message {
 }
 
 // Returns all known messages bound to specific mailbox.
-func (storage *Storage) GetMessages(mailboxId string) []*Message {
+func (storage *Storage) GetMessages(mailboxId string) []*message.Message {
 	if mailboxMessages, ok := storage.mailboxMessages[mailboxId]; ok {
-		messages := make([]*Message, 0, len(mailboxMessages))
+		messages := make([]*message.Message, 0, len(mailboxMessages))
 
 		for _, message := range mailboxMessages {
 			messages = append(messages, message)
@@ -144,18 +135,18 @@ func (storage *Storage) GetMessages(mailboxId string) []*Message {
 		return messages
 	}
 
-	return make([]*Message, 0)
+	return make([]*message.Message, 0)
 }
 
 // Registers mailbox name and returns corresponding mailbox.
 //
 // When mailbox name is already registered just returns mailbox.
-func (storage *Storage) addMailbox(name string) *Mailbox {
+func (storage *Storage) addMailbox(name string) *mailbox.Mailbox {
 	if mailbox, ok := storage.mailboxesByName[name]; ok {
 		return mailbox
 	}
 
-	mailbox := NewMailbox(name)
+	mailbox := mailbox.NewMailbox(name)
 
 	storage.mailboxes[mailbox.Id] = mailbox
 	storage.mailboxesByName[mailbox.Name] = mailbox
@@ -164,14 +155,14 @@ func (storage *Storage) addMailbox(name string) *Mailbox {
 }
 
 // Deletes all traces of message.
-func (storage *Storage) pruneMessage(message *Message, mailboxId string) {
+func (storage *Storage) pruneMessage(message *message.Message, mailboxId string) {
 	delete(storage.messages, message.Id)
 	delete(storage.messageMailboxes, message.Id)
 	delete(storage.mailboxMessages[mailboxId], message.Id)
 }
 
 // Deletes all traces of mailbox.
-func (storage *Storage) pruneMailbox(mailbox *Mailbox) {
+func (storage *Storage) pruneMailbox(mailbox *mailbox.Mailbox) {
 	if len(storage.mailboxMessages[mailbox.Id]) == 0 {
 		delete(storage.mailboxes, mailbox.Id)
 		delete(storage.mailboxesByName, mailbox.Name)
@@ -182,30 +173,11 @@ func (storage *Storage) pruneMailbox(mailbox *Mailbox) {
 // Creates new central storage.
 func NewStorage(backend StorageBackend) *Storage {
 	return &Storage{
-		Backend:          backend,
-		mailboxes:        make(map[string]*Mailbox),
-		mailboxesByName:  make(map[string]*Mailbox),
-		mailboxMessages:  make(map[string]map[string]*Message),
-		messages:         make(map[string]*Message),
-		messageMailboxes: make(map[string]*Mailbox),
+		backend:          backend,
+		mailboxes:        make(map[string]*mailbox.Mailbox),
+		mailboxesByName:  make(map[string]*mailbox.Mailbox),
+		mailboxMessages:  make(map[string]map[string]*message.Message),
+		messages:         make(map[string]*message.Message),
+		messageMailboxes: make(map[string]*mailbox.Mailbox),
 	}
-}
-
-// In-memory storage.
-//
-// Stored messages are lost upon application restart.
-type MemoryStorageBackend struct {
-	messages []*Message
-}
-
-func (storage *MemoryStorageBackend) Add(msg *Message) {
-	storage.messages = append(storage.messages, msg)
-}
-
-func (storage *MemoryStorageBackend) Count() int {
-	return len(storage.messages)
-}
-
-func (storage *MemoryStorageBackend) GetAll() []*Message {
-	return storage.messages
 }

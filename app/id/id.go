@@ -1,4 +1,4 @@
-package app
+package id
 
 import (
 	"crypto/rand"
@@ -7,8 +7,8 @@ import (
 
 // Generates pseudo-unique identifier.
 //
-// Generation is oversimplified because real uniqueness is not actually required. Collisions are not actually
-// a problem as much as application is concerned.
+// Generation is oversimplified because real uniqueness is not actually required.
+// Collisions are not a problem as much as application goals are concerned.
 func NewId() string {
 	buf := make([]byte, 16)
 

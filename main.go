@@ -3,13 +3,16 @@ package main
 import (
 	"context"
 	"go-fake-smtp/app"
+	"go-fake-smtp/app/smtp"
+	"go-fake-smtp/app/storage"
+	"go-fake-smtp/app/web"
 )
 
 func main() {
-	storage := app.NewStorage(&app.MemoryStorageBackend{})
+	storage := storage.NewStorage(&storage.MemoryBackend{})
 
-	smtpServer := app.NewSmtpServer(storage)
-	webServer := app.NewWebServer(storage)
+	smtpServer := smtp.NewServer(storage)
+	webServer := web.NewServer(storage)
 
 	app := app.NewApp(smtpServer, webServer)
 

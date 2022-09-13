@@ -1,4 +1,6 @@
-package app
+package mailbox
+
+import "go-fake-smtp/app/id"
 
 type Mailbox struct {
 	// Unique mailbox ID
@@ -12,9 +14,10 @@ type Mailbox struct {
 	Name string
 }
 
+// Creates new mailbox.
 func NewMailbox(name string) *Mailbox {
 	return &Mailbox{
-		Id:   NewId(),
+		Id:   id.NewId(),
 		Name: name,
 	}
 }

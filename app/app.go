@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"go-fake-smtp/app/smtp"
+	"go-fake-smtp/app/web"
 	"os"
 	"os/signal"
 	"sync"
@@ -11,10 +13,10 @@ import (
 // The application. This slack just delegates the job to it's subsystems.
 type Application struct {
 	// Configured SMTP server
-	smtpServer *SmtpServer
+	smtpServer *smtp.SmtpServer
 
 	// Configured HTTP server
-	webServer *WebServer
+	webServer *web.WebServer
 }
 
 // Starts all subsystems and awaits their termination
@@ -50,7 +52,7 @@ func (app *Application) watchTerminationSignal(cancel context.CancelFunc) {
 }
 
 // Creates new application
-func NewApp(smtpServer *SmtpServer, webServer *WebServer) *Application {
+func NewApp(smtpServer *smtp.SmtpServer, webServer *web.WebServer) *Application {
 	return &Application{
 		smtpServer: smtpServer,
 		webServer:  webServer,

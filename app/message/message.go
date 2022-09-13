@@ -1,4 +1,6 @@
-package app
+package message
+
+import "go-fake-smtp/app/id"
 
 // Information on individual message.
 type Message struct {
@@ -9,9 +11,10 @@ type Message struct {
 	RawData string
 }
 
+// Creates new message.
 func NewMessage(rawData string) *Message {
 	return &Message{
-		Id:      NewId(),
+		Id:      id.NewId(),
 		RawData: rawData,
 	}
 }
