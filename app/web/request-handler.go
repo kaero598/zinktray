@@ -82,7 +82,7 @@ func (handler *requestHandler) getMessageList(response http.ResponseWriter, requ
 
 	for _, msg := range handler.storage.GetMessages(mailboxId) {
 		publishList = append(publishList, publishedMessage{
-			RawData: msg.RawData,
+			RawData: msg.GetRawData(),
 		})
 	}
 
