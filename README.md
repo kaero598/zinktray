@@ -5,8 +5,10 @@ All emails sent are stored in memory and may be retrieved via API.
 
 ## Features
 
-* Authenticated email sending. Any login and password are allowed.
+* Anonymous and authenticated email sending.
+* API to retrieve all registered mailboxes.
 * API to retrieve all stored messages.
+* API to retrieve raw message contents.
 
 ## Usage
 
