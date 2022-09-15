@@ -53,6 +53,8 @@ func (srv *WebServer) addHandlers() {
 		storage: srv.storage,
 	}
 
+	http.Handle("/", http.FileServer(http.Dir("public")))
+
 	http.Handle("/api/mailboxes/delete", http.HandlerFunc(handler.deleteMailbox))
 	http.Handle("/api/mailboxes/list", http.HandlerFunc(handler.getMailboxList))
 
