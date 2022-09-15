@@ -88,3 +88,17 @@ func (handler *requestHandler) getMessageList(response http.ResponseWriter, requ
 		response.Write(encoded)
 	}
 }
+
+// Returns raw message contents as received via SMTP session.
+func (handler *requestHandler) getMessageRawContents(response http.ResponseWriter, request *http.Request) {
+	messageId := request.FormValue("message_id")
+
+	if message := handler.storage.GetMessage(messageId); message == nil {
+		log.Printf("Message \"%s\" not found\n", messageId)
+
+		response.WriteHeader(http.StatusNotFound)
+	} else {
+		response.Header().Add("Content-Type", "text/plain")
+		response.Write([]byte(message.GetRawData()))
+	}
+}
