@@ -6,12 +6,16 @@ import (
 	"go-fake-smtp/app/id"
 	"io"
 	"strings"
+	"time"
 )
 
 // Information on individual message.
 type Message struct {
 	// Unique message ID.
 	Id string
+
+	// The time message has been received at
+	ReceivedAt time.Time
 
 	// Raw message contents along with body and headers.
 	//
@@ -58,7 +62,8 @@ func (msg *Message) SetRawData(rawData string) {
 // Creates new message.
 func NewMessage(rawData string) *Message {
 	msg := &Message{
-		Id: id.NewId(),
+		Id:         id.NewId(),
+		ReceivedAt: time.Now(),
 	}
 
 	msg.SetRawData(rawData)
