@@ -7,9 +7,6 @@ import (
 
 // Central storage for everything mail.
 type Storage struct {
-	// backend responsible for storing messages.
-	backend StorageBackend
-
 	// Index of all known mailboxes.
 	//
 	// The key is unique mailbox ID.
@@ -49,8 +46,6 @@ func (storage *Storage) Add(msg *message.Message, mailboxName string) {
 	storage.messages[msg.Id] = msg
 	storage.messageMailboxes[msg.Id] = mailbox
 	storage.mailboxMessages[mailbox.Id][msg.Id] = msg
-
-	storage.backend.Add(msg)
 }
 
 // Returns the number of known mailboxes.
@@ -171,9 +166,8 @@ func (storage *Storage) pruneMailbox(mailbox *mailbox.Mailbox) {
 }
 
 // Creates new central storage.
-func NewStorage(backend StorageBackend) *Storage {
+func NewStorage() *Storage {
 	return &Storage{
-		backend:          backend,
 		mailboxes:        make(map[string]*mailbox.Mailbox),
 		mailboxesByName:  make(map[string]*mailbox.Mailbox),
 		mailboxMessages:  make(map[string]map[string]*message.Message),

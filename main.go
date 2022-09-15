@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	storage := storage.NewStorage(&storage.MemoryBackend{})
+	storage := storage.NewStorage()
 
 	smtpServer := smtp.NewServer(storage)
 	webServer := web.NewServer(storage)
