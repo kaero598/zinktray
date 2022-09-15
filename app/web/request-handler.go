@@ -2,16 +2,11 @@ package web
 
 import (
 	"encoding/json"
+	"go-fake-smtp/app/message"
 	"go-fake-smtp/app/storage"
 	"log"
 	"net/http"
 )
-
-// Essential message data to be returned via API.
-type publishedMessage struct {
-	// Raw message contents along with body and headers.
-	RawData string `json:"rawData"`
-}
 
 // Custom HTTP request handler.
 type requestHandler struct {
@@ -78,12 +73,10 @@ func (handler *requestHandler) getMailboxList(response http.ResponseWriter, requ
 // Returns JSON-formatted list of all stored messages.
 func (handler *requestHandler) getMessageList(response http.ResponseWriter, request *http.Request) {
 	mailboxId := request.FormValue("mailbox_id")
-	publishList := make([]publishedMessage, 0, handler.storage.CountMessages(mailboxId))
+	publishList := make([]*message.MessageDetails, 0, handler.storage.CountMessages(mailboxId))
 
 	for _, msg := range handler.storage.GetMessages(mailboxId) {
-		publishList = append(publishList, publishedMessage{
-			RawData: msg.GetRawData(),
-		})
+		publishList = append(publishList, message.Parse(msg))
 	}
 
 	if encoded, err := json.Marshal(publishList); err != nil {
