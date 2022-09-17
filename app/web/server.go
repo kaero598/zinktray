@@ -60,6 +60,7 @@ func (srv *WebServer) addHandlers() {
 
 	http.Handle("/api/messages/delete", http.HandlerFunc(handler.deleteMessage))
 	http.Handle("/api/messages/list", http.HandlerFunc(handler.getMessageList))
+	http.Handle("/api/messages/details", http.HandlerFunc(handler.getMessageDetails))
 	http.Handle("/api/messages/raw", http.HandlerFunc(handler.getMessageRawContents))
 }
 

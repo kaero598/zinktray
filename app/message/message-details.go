@@ -7,4 +7,5 @@ type MessageDetails struct {
 	To         []string `json:"to"`
 	Subject    string   `json:"subject"`
 	ReceivedAt int64    `json:"receivedAt"`
+	RawBody    string   `json:"rawBody"`
 }

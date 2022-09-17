@@ -1,6 +1,7 @@
 package message
 
 import (
+	"io"
 	"log"
 	"net/mail"
 	"strings"
@@ -14,12 +15,19 @@ func Parse(msg *Message) *MessageDetails {
 		panic(err)
 	}
 
+	body, err := io.ReadAll(message.Body)
+
+	if err != nil {
+		log.Printf("Cannot read body of message %s", msg.Id)
+	}
+
 	return &MessageDetails{
 		Id:         msg.Id,
 		Subject:    message.Header.Get("Subject"),
 		From:       extractAddressList(message, "From"),
 		To:         extractAddressList(message, "To"),
 		ReceivedAt: msg.ReceivedAt.Unix(),
+		RawBody:    string(body),
 	}
 }
 

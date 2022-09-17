@@ -94,6 +94,26 @@ func (handler *requestHandler) getMessageList(response http.ResponseWriter, requ
 	}
 }
 
+// Returns JSON-formatted details of stored message.
+func (handler *requestHandler) getMessageDetails(response http.ResponseWriter, request *http.Request) {
+	messageId := request.FormValue("message_id")
+
+	if msg := handler.storage.GetMessage(messageId); msg == nil {
+		log.Printf("Message \"%s\" not found\n", messageId)
+
+		response.WriteHeader(http.StatusNotFound)
+	} else {
+		if encoded, err := json.Marshal(message.Parse(msg)); err != nil {
+			log.Printf("Cannot encode message: %s\n", err)
+
+			response.WriteHeader(http.StatusInternalServerError)
+		} else {
+			response.Header().Add("Content-Type", "application/json")
+			response.Write(encoded)
+		}
+	}
+}
+
 // Returns raw message contents as received via SMTP session.
 func (handler *requestHandler) getMessageRawContents(response http.ResponseWriter, request *http.Request) {
 	messageId := request.FormValue("message_id")
