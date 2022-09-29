@@ -1,14 +1,44 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
 
     <title>Go-Fake-Smtp</title>
+
+    <link rel="stylesheet" href="/assets/index.css">
 </head>
 
 <body>
-    <h1>Go-Fake-Smtp</h1>
+    <div class="layout">
+        <header>
+            <div class="logo">
+                <a href="/">Go-Fake-Smtp</a>
+            </div>
+
+            <div class="mailbox-selector">
+            </div>
+        </header>
+
+        <nav class="message-list">
+            <p class="message-list-empty">
+                No messages.
+            </p>
+
+            <p class="message-list-loading">
+                Loading messages...
+            </p>
+
+            <ul class="message-selector" hidden>
+            </ul>
+        </nav>
+
+        <main>
+            <p>Select message first.</p>
+        </main>
+    </div>
+
+    <script src="/assets/index.js"></script>
 </body>
 
 </html>

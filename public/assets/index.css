@@ -1,0 +1,133 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #fff;
+    font-family: sans-serif;
+    font-size: 16px;
+    margin: 0;
+    padding: 0;
+}
+
+p {
+    margin: 0 0 8px;
+}
+
+.layout {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.layout header {
+    background-color: #545454;
+    color: #fff;
+    display: flex;
+    height: 40px;
+    width: 100vw;
+}
+
+.layout header .logo {
+    line-height: 40px;
+    width: 25vw;
+}
+
+.layout header .logo a {
+    color: inherit;
+    text-decoration: none;
+    padding: 0 8px;
+}
+
+.layout header .mailbox-selector {
+    background-color: #878787;
+    color: #000;
+    font-family: monospace;
+    flex-grow: 1;
+    line-height: 40px;
+    padding: 0 8px;
+}
+
+.layout nav {
+    background-color: #f1f1f1;
+    flex-grow: 0;
+    width: 25vw;
+}
+
+.layout nav p {
+    margin-top: 8px;
+    margin-left: 8px;
+    margin-right: 8px;
+}
+
+.layout nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.layout nav li {
+    display: flex;
+}
+
+.layout nav li:nth-child(n) {
+    background-color: #e1e1e1;
+}
+
+.layout nav li:nth-child(2n) {
+    background-color: #cdcdcd;
+}
+
+.layout nav li.active {
+    background-color: #646464;
+}
+
+.layout nav li.active a {
+    color: #fff;
+}
+
+.layout nav li a {
+    color: #000;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    padding: 8px;
+    text-decoration: none;
+    width: 100%;
+}
+
+.layout nav li .subject {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: hidden;
+    white-space: nowrap;
+}
+
+.layout nav li .subject.empty-subject {
+    font-style: italic;
+}
+
+.layout nav li .meta {
+    display: flex;
+    justify-content: space-between;
+}
+
+.layout nav li .recipient {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.layout nav li .receive-time {
+    user-select: none;
+    white-space: nowrap;
+}
+
+.layout main {
+    flex-grow: 1;
+    padding: 8px;
+}
+
+.layout main .message-view-content {
+    font-family: monospace;
+    white-space: pre-wrap;
+}
