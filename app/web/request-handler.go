@@ -3,8 +3,9 @@ package web
 import (
 	"encoding/json"
 	"go-fake-smtp/app/mailbox"
-	"go-fake-smtp/app/message"
+	"go-fake-smtp/app/message/parse"
 	"go-fake-smtp/app/storage"
+	webmessage "go-fake-smtp/app/web/message"
 	"log"
 	"net/http"
 )
@@ -78,10 +79,24 @@ func (handler *requestHandler) getMailboxList(response http.ResponseWriter, requ
 // Returns JSON-formatted list of all stored messages.
 func (handler *requestHandler) getMessageList(response http.ResponseWriter, request *http.Request) {
 	mailboxId := request.FormValue("mailbox_id")
-	publishList := make([]*message.MessageDetails, 0, handler.storage.CountMessages(mailboxId))
+	publishList := make([]webmessage.EssentialMessageInfo, 0, handler.storage.CountMessages(mailboxId))
 
 	for _, msg := range handler.storage.GetMessages(mailboxId) {
-		publishList = append(publishList, message.Parse(msg))
+		if messageInfo, err := parse.ReadBasic(msg.GetRawData()); err == nil {
+			publishList = append(publishList, webmessage.EssentialMessageInfo{
+				Id:         msg.Id,
+				From:       messageInfo.From,
+				To:         messageInfo.To,
+				Subject:    messageInfo.Subject,
+				ReceivedAt: msg.ReceivedAt.Unix(),
+			})
+		} else {
+			log.Printf("Cannot extract basic message info: %s\n", err)
+
+			response.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
 	}
 
 	if encoded, err := json.Marshal(publishList); err != nil {
@@ -103,7 +118,40 @@ func (handler *requestHandler) getMessageDetails(response http.ResponseWriter, r
 
 		response.WriteHeader(http.StatusNotFound)
 	} else {
-		if encoded, err := json.Marshal(message.Parse(msg)); err != nil {
+		var messageInfo *parse.BasicInfo
+		var messageContent *parse.ContentInfo
+		var err error
+
+		messageInfo, err = parse.ReadBasic(msg.GetRawData())
+
+		if err != nil {
+			log.Printf("Cannot extract basic message info: %s\n", err)
+
+			response.WriteHeader(http.StatusInternalServerError)
+		}
+
+		messageContent, err = parse.ReadContents(msg.GetRawData())
+
+		if err != nil {
+			log.Printf("Cannot extract message content: %s\n", err)
+
+			response.WriteHeader(http.StatusInternalServerError)
+		}
+
+		publishInfo := webmessage.DetailedMessageInfo{
+			Id:         msg.Id,
+			From:       messageInfo.From,
+			To:         messageInfo.To,
+			Subject:    messageInfo.Subject,
+			ReceivedAt: msg.ReceivedAt.Unix(),
+			Content: webmessage.MessageContent{
+				Raw:  msg.GetRawData(),
+				Html: messageContent.Html,
+				Text: messageContent.Plain,
+			},
+		}
+
+		if encoded, err := json.Marshal(publishInfo); err != nil {
 			log.Printf("Cannot encode message: %s\n", err)
 
 			response.WriteHeader(http.StatusInternalServerError)
