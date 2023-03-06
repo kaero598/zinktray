@@ -2,9 +2,9 @@ package web
 
 import (
 	"encoding/json"
-	"go-fake-smtp/app/mailbox"
 	"go-fake-smtp/app/message/parse"
 	"go-fake-smtp/app/storage"
+	webmailbox "go-fake-smtp/app/web/mailbox"
 	webmessage "go-fake-smtp/app/web/message"
 	"log"
 	"net/http"
@@ -56,10 +56,10 @@ func (handler *requestHandler) deleteMessage(response http.ResponseWriter, reque
 
 // Returns JSON-formatted list of all available mailboxes.
 func (handler *requestHandler) getMailboxList(response http.ResponseWriter, request *http.Request) {
-	publishList := make([]mailbox.MailboxDetails, 0, handler.storage.CountMailboxes())
+	publishList := make([]webmailbox.MailboxDetails, 0, handler.storage.CountMailboxes())
 
 	for _, mbx := range handler.storage.GetMailboxes() {
-		publishList = append(publishList, mailbox.MailboxDetails{
+		publishList = append(publishList, webmailbox.MailboxDetails{
 			Id:          mbx.Id,
 			Name:        mbx.Name,
 			IsAnonymous: mbx.Name == "",
