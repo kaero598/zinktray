@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// Generates pseudo-unique identifier.
+// NewId generates pseudo-unique identifier.
 //
 // Generation is oversimplified because real uniqueness is not actually required.
 // Collisions are not a problem as much as application goals are concerned.
