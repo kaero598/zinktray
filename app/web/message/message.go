@@ -2,7 +2,7 @@ package message
 
 // Essential message information.
 type EssentialMessageInfo struct {
-	Id         string   `json:"id"`
+	ID         string   `json:"id"`
 	From       []string `json:"from"`
 	To         []string `json:"to"`
 	Subject    string   `json:"subject"`
@@ -11,7 +11,7 @@ type EssentialMessageInfo struct {
 
 // Detailed message information.
 type DetailedMessageInfo struct {
-	Id         string         `json:"id"`
+	ID         string         `json:"id"`
 	From       []string       `json:"from"`
 	To         []string       `json:"to"`
 	Subject    string         `json:"subject"`

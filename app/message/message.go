@@ -9,21 +9,22 @@ import (
 	"time"
 )
 
-// Information on individual message.
+// Message structure represents information on individual message.
 type Message struct {
-	// Unique message ID.
-	Id string
+	// ID contains unique message identifier.
+	ID string
 
-	// The time message has been received at
+	// ReceivedAt contains time message has been received at.
 	ReceivedAt time.Time
 
-	// Raw message contents along with body and headers.
+	// rawData contains raw message contents along with body and headers.
 	//
-	// Compressed with gzip.
+	// Contents of rawData is compressed. Use GetRawData to read and SetRawData to write
+	// uncompressed message contents.
 	rawData string
 }
 
-// Reads raw message contents.
+// GetRawData reads uncompressed raw message contents.
 func (msg *Message) GetRawData() string {
 	rd, err := gzip.NewReader(strings.NewReader(msg.rawData))
 
@@ -42,7 +43,7 @@ func (msg *Message) GetRawData() string {
 	return string(rawData)
 }
 
-// Writes raw message contents.
+// SetRawData writes uncompressed raw message contents.
 func (msg *Message) SetRawData(rawData string) {
 	var out bytes.Buffer
 
@@ -59,10 +60,10 @@ func (msg *Message) SetRawData(rawData string) {
 	msg.rawData = out.String()
 }
 
-// Creates new message.
+// NewMessage creates new message structure.
 func NewMessage(rawData string) *Message {
 	msg := &Message{
-		Id:         id.NewId(),
+		ID:         id.NewId(),
 		ReceivedAt: time.Now(),
 	}
 

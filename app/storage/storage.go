@@ -20,9 +20,6 @@ type Storage struct {
 	// Maps mailbox ID to mailbox itself.
 	mbxIdIndex map[string]*mailbox.Mailbox
 
-	// Maps mailbox name to mailbox itself.
-	mbxNameIndex map[string]*mailbox.Mailbox
-
 	// Maps message ID to message itself.
 	msgIdIndex map[string]*message.Message
 
@@ -30,20 +27,18 @@ type Storage struct {
 	msgMbxIndex map[string]string
 }
 
-// Add stores new message
-//
-// Requires name of the mailbox (not unique mailbox ID) to append message to.
-func (storage *Storage) Add(msg *message.Message, mailboxName string) {
+// Add stores new message and binds it to mailbox with provided ID.
+func (storage *Storage) Add(msg *message.Message, mailboxID string) {
 	storage.msgLock.Lock()
 
-	mbx := storage.registerMailbox(mailboxName)
+	mbx := storage.registerMailbox(mailboxID)
 
-	if _, ok := storage.msgIdIndex[msg.Id]; !ok {
-		storage.mbxMsgList[mbx.Id] = append(storage.mbxMsgList[mbx.Id], msg.Id)
+	if _, ok := storage.msgIdIndex[msg.ID]; !ok {
+		storage.mbxMsgList[mbx.ID] = append(storage.mbxMsgList[mbx.ID], msg.ID)
 	}
 
-	storage.msgIdIndex[msg.Id] = msg
-	storage.msgMbxIndex[msg.Id] = mbx.Id
+	storage.msgIdIndex[msg.ID] = msg
+	storage.msgMbxIndex[msg.ID] = mbx.ID
 
 	storage.msgLock.Unlock()
 }
@@ -60,7 +55,7 @@ func (storage *Storage) CountMessages(mailboxId string) int {
 	var length int
 
 	if mbx, ok := storage.mbxIdIndex[mailboxId]; ok {
-		length = len(storage.mbxMsgList[mbx.Id])
+		length = len(storage.mbxMsgList[mbx.ID])
 	}
 
 	storage.mbxLock.RUnlock()
@@ -93,7 +88,7 @@ func (storage *Storage) DeleteMessage(messageId string) {
 	storage.mbxLock.Lock()
 
 	if msg, ok := storage.msgIdIndex[messageId]; ok {
-		mbxId := storage.msgMbxIndex[msg.Id]
+		mbxId := storage.msgMbxIndex[msg.ID]
 		mbx := storage.mbxIdIndex[mbxId]
 
 		storage.purgeMessage(msg)
@@ -173,22 +168,21 @@ func (storage *Storage) GetMessages(mailboxId string) []*message.Message {
 	return result
 }
 
-// registerMailbox registers mailbox name and returns corresponding mailbox.
+// registerMailbox registers mailbox ID and returns corresponding mailbox.
 //
-// When mailbox name is already registered returns that mailbox.
-func (storage *Storage) registerMailbox(name string) *mailbox.Mailbox {
+// When mailbox ID is already registered returns that mailbox.
+func (storage *Storage) registerMailbox(mailboxId string) *mailbox.Mailbox {
 	var mbx *mailbox.Mailbox
 
-	if v, ok := storage.mbxNameIndex[name]; ok {
+	if v, ok := storage.mbxIdIndex[mailboxId]; ok {
 		mbx = v
 	} else {
-		mbx = mailbox.NewMailbox(name)
+		mbx = mailbox.NewMailbox(mailboxId)
 
 		storage.mbxList = append(storage.mbxList, mbx)
-		storage.mbxIdIndex[mbx.Id] = mbx
-		storage.mbxNameIndex[mbx.Name] = mbx
+		storage.mbxIdIndex[mbx.ID] = mbx
 
-		storage.mbxMsgList[mbx.Id] = make([]string, 0, 1)
+		storage.mbxMsgList[mbx.ID] = make([]string, 0, 1)
 	}
 
 	return mbx
@@ -196,13 +190,13 @@ func (storage *Storage) registerMailbox(name string) *mailbox.Mailbox {
 
 // purgeMessage deletes all traces of specified message.
 func (storage *Storage) purgeMessage(message *message.Message) {
-	mbxId := storage.msgMbxIndex[message.Id]
+	mbxId := storage.msgMbxIndex[message.ID]
 
-	delete(storage.msgIdIndex, message.Id)
-	delete(storage.msgMbxIndex, message.Id)
+	delete(storage.msgIdIndex, message.ID)
+	delete(storage.msgMbxIndex, message.ID)
 
 	for k, v := range storage.mbxMsgList[mbxId] {
-		if v == message.Id {
+		if v == message.ID {
 			updatedMsgList := make([]string, 0, len(storage.mbxMsgList[mbxId])-1)
 			updatedMsgList = append(updatedMsgList, storage.mbxMsgList[mbxId][:k]...)
 			updatedMsgList = append(updatedMsgList, storage.mbxMsgList[mbxId][k+1:]...)
@@ -216,16 +210,15 @@ func (storage *Storage) purgeMessage(message *message.Message) {
 
 // purgeMailbox deletes all traces of specified mailbox provided it has no registered messages.
 func (storage *Storage) purgeMailbox(mbx *mailbox.Mailbox) {
-	if len(storage.mbxMsgList[mbx.Id]) > 0 {
+	if len(storage.mbxMsgList[mbx.ID]) > 0 {
 		return
 	}
 
-	delete(storage.mbxIdIndex, mbx.Id)
-	delete(storage.mbxNameIndex, mbx.Name)
-	delete(storage.mbxMsgList, mbx.Id)
+	delete(storage.mbxIdIndex, mbx.ID)
+	delete(storage.mbxMsgList, mbx.ID)
 
 	for k, v := range storage.mbxList {
-		if v.Id == mbx.Id {
+		if v.ID == mbx.ID {
 			updatedMbxList := make([]*mailbox.Mailbox, 0, len(storage.mbxList)-1)
 			updatedMbxList = append(updatedMbxList, storage.mbxList[:k]...)
 			updatedMbxList = append(updatedMbxList, storage.mbxList[k+1:]...)
@@ -237,7 +230,7 @@ func (storage *Storage) purgeMailbox(mbx *mailbox.Mailbox) {
 	}
 }
 
-// NewStorage creates new central storage.
+// NewStorage creates new central storage structure.
 func NewStorage() *Storage {
 	return &Storage{
 		mbxLock: sync.RWMutex{},
@@ -246,8 +239,7 @@ func NewStorage() *Storage {
 		mbxList:    make([]*mailbox.Mailbox, 0),
 		mbxMsgList: make(map[string][]string),
 
-		mbxIdIndex:   make(map[string]*mailbox.Mailbox),
-		mbxNameIndex: make(map[string]*mailbox.Mailbox),
+		mbxIdIndex: make(map[string]*mailbox.Mailbox),
 
 		msgIdIndex:  make(map[string]*message.Message),
 		msgMbxIndex: make(map[string]string),

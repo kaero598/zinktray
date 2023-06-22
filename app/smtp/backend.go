@@ -1,29 +1,34 @@
 package smtp
 
 import (
-	"errors"
+	"go-fake-smtp/app/mailbox"
 	"go-fake-smtp/app/storage"
 
 	"github.com/emersion/go-smtp"
 )
 
-// Application SMTP backend.
+// smtpBackend structure represents an application SMTP backend.
 type smtpBackend struct {
-	// Central message storage
-	storage *storage.Storage
+	// store provides central message storage.
+	store *storage.Storage
 }
 
+// AnonymousLogin creates a new session for clients without authentication.
+//
+// Anonymous session is operating a built-in anonymous mailbox.
 func (backend *smtpBackend) AnonymousLogin(_ *smtp.ConnectionState) (smtp.Session, error) {
-	// Allow anonymous login and store all messages in anonymous mailbox.
-	return &smtpSession{storage: backend.storage}, nil
+	return &smtpSession{
+		store:       backend.store,
+		mailboxName: mailbox.Anonymous,
+	}, nil
 }
 
-func (backend *smtpBackend) Login(_ *smtp.ConnectionState, username string, password string) (smtp.Session, error) {
-	// Forbid empty login to prevent confusion with anonymous mailbox.
-	if username == "" {
-		return nil, errors.New("empty username is forbidden")
-	}
-
-	// Allow any other login since there are no mechanics to utilize logins yet.
-	return &smtpSession{storage: backend.storage, mailboxName: username}, nil
+// Login creates a new session for authenticated clients.
+//
+// Authenticated username is used as a name for operated mailbox.
+func (backend *smtpBackend) Login(_ *smtp.ConnectionState, username string, _ string) (smtp.Session, error) {
+	return &smtpSession{
+		store:       backend.store,
+		mailboxName: username,
+	}, nil
 }

@@ -29,7 +29,7 @@ func (handler *requestHandler) deleteMailbox(response http.ResponseWriter, reque
 	mailbox := handler.storage.GetMailbox(mailboxId)
 
 	if mailbox != nil {
-		handler.storage.DeleteMailbox(mailbox.Id)
+		handler.storage.DeleteMailbox(mailbox.ID)
 	} else {
 		response.WriteHeader(404)
 	}
@@ -48,7 +48,7 @@ func (handler *requestHandler) deleteMessage(response http.ResponseWriter, reque
 	message := handler.storage.GetMessage(messageId)
 
 	if message != nil {
-		handler.storage.DeleteMessage(message.Id)
+		handler.storage.DeleteMessage(message.ID)
 	} else {
 		response.WriteHeader(404)
 	}
@@ -56,13 +56,11 @@ func (handler *requestHandler) deleteMessage(response http.ResponseWriter, reque
 
 // Returns JSON-formatted list of all available mailboxes.
 func (handler *requestHandler) getMailboxList(response http.ResponseWriter, request *http.Request) {
-	publishList := make([]webmailbox.MailboxDetails, 0, handler.storage.CountMailboxes())
+	publishList := make([]webmailbox.EssentialMailboxInfo, 0, handler.storage.CountMailboxes())
 
 	for _, mbx := range handler.storage.GetMailboxes() {
-		publishList = append(publishList, webmailbox.MailboxDetails{
-			Id:          mbx.Id,
-			Name:        mbx.Name,
-			IsAnonymous: mbx.Name == "",
+		publishList = append(publishList, webmailbox.EssentialMailboxInfo{
+			ID: mbx.ID,
 		})
 	}
 
@@ -84,7 +82,7 @@ func (handler *requestHandler) getMessageList(response http.ResponseWriter, requ
 	for _, msg := range handler.storage.GetMessages(mailboxId) {
 		if messageInfo, err := parse.ReadBasic(msg.GetRawData()); err == nil {
 			publishList = append(publishList, webmessage.EssentialMessageInfo{
-				Id:         msg.Id,
+				ID:         msg.ID,
 				From:       messageInfo.From,
 				To:         messageInfo.To,
 				Subject:    messageInfo.Subject,
@@ -139,7 +137,7 @@ func (handler *requestHandler) getMessageDetails(response http.ResponseWriter, r
 		}
 
 		publishInfo := webmessage.DetailedMessageInfo{
-			Id:         msg.Id,
+			ID:         msg.ID,
 			From:       messageInfo.From,
 			To:         messageInfo.To,
 			Subject:    messageInfo.Subject,

@@ -10,22 +10,22 @@ import (
 	"github.com/emersion/go-smtp"
 )
 
-// SMTP server.
+// SmtpServer structure represents an SMTP server implementation.
 //
-// Starts SMTP backend and handles it's termination.
+// Handles start and termination of SMTP backend.
 type SmtpServer struct {
-	// Storage for received messages.
-	storage *storage.Storage
+	// store provides central message storage.
+	store *storage.Storage
 }
 
-// Wires-up SMTP server.
+// Start wires-up SMTP server.
 //
 // The backend is terminated as soon as ctx is cancelled.
 func (srv *SmtpServer) Start(ctx context.Context, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 
 	backend := &smtpBackend{
-		storage: srv.storage,
+		store: srv.store,
 	}
 
 	server := smtp.NewServer(backend)
@@ -51,9 +51,9 @@ func (srv *SmtpServer) Start(ctx context.Context, waitGroup *sync.WaitGroup) {
 	}
 }
 
-// Creates new SMTP server
+// NewServer creates new SMTP server structure.
 func NewServer(storage *storage.Storage) *SmtpServer {
 	return &SmtpServer{
-		storage: storage,
+		store: storage,
 	}
 }

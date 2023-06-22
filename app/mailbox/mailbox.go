@@ -1,23 +1,19 @@
 package mailbox
 
-import "go-fake-smtp/app/id"
+// Anonymous is a name of a built-in mailbox for anonymous SMTP sessions.
+const Anonymous = "anonymous"
 
+// Mailbox structure represents information on individual mailbox.
 type Mailbox struct {
-	// Unique mailbox ID
-	Id string
-
-	// Name of the mailbox
+	// ID contains unique mailbox identifier.
 	//
-	// This does not serve any real purpose other than for API users to distinguish mailboxes with accessible way.
-	//
-	// Anonymous mailbox has empty name.
-	Name string
+	// Usually this is the username provided during authentication.
+	ID string
 }
 
-// Creates new mailbox.
-func NewMailbox(name string) *Mailbox {
+// NewMailbox creates new mailbox structure.
+func NewMailbox(mailboxId string) *Mailbox {
 	return &Mailbox{
-		Id:   id.NewId(),
-		Name: name,
+		ID: mailboxId,
 	}
 }
