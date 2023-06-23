@@ -3,18 +3,18 @@ package main
 import (
 	"context"
 	"go-fake-smtp/app"
+	"go-fake-smtp/app/api"
 	"go-fake-smtp/app/smtp"
 	"go-fake-smtp/app/storage"
-	"go-fake-smtp/app/web"
 )
 
 func main() {
-	storage := storage.NewStorage()
+	store := storage.NewStorage()
 
-	smtpServer := smtp.NewServer(storage)
-	webServer := web.NewServer(storage)
+	smtpServer := smtp.NewServer(store)
+	apiServer := api.NewServer(store)
 
-	app := app.NewApp(smtpServer, webServer)
+	application := app.NewApp(smtpServer, apiServer)
 
-	app.Start(context.Background())
+	application.Start(context.Background())
 }

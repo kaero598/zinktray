@@ -2,24 +2,26 @@ package app
 
 import (
 	"context"
+	"go-fake-smtp/app/api"
 	"go-fake-smtp/app/smtp"
-	"go-fake-smtp/app/web"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 )
 
-// The application. This slack just delegates the job to it's subsystems.
+// Application represents the application itself.
+//
+// This slack just delegates the job to its subsystems.
 type Application struct {
+	// Configured HTTP server
+	apiServer *api.Server
+
 	// Configured SMTP server
 	smtpServer *smtp.SmtpServer
-
-	// Configured HTTP server
-	webServer *web.WebServer
 }
 
-// Starts all subsystems and awaits their termination
+// Start starts all application subsystems and awaits their termination.
 func (app *Application) Start(ctx context.Context) {
 	appContext, cancel := context.WithCancel(ctx)
 
@@ -33,12 +35,12 @@ func (app *Application) Start(ctx context.Context) {
 
 	waitGroup.Add(1)
 
-	go app.webServer.Start(appContext, waitGroup)
+	go app.apiServer.Start(appContext, waitGroup)
 
 	waitGroup.Wait()
 }
 
-// Wires up OS signal handler and triggers application to terminate
+// watchTerminationSignal wires up OS signal handler and triggers application to terminate
 func (app *Application) watchTerminationSignal(cancel context.CancelFunc) {
 	channel := make(chan os.Signal, 1)
 
@@ -51,10 +53,10 @@ func (app *Application) watchTerminationSignal(cancel context.CancelFunc) {
 	}()
 }
 
-// Creates new application
-func NewApp(smtpServer *smtp.SmtpServer, webServer *web.WebServer) *Application {
+// NewApp creates new application structure.
+func NewApp(smtpServer *smtp.SmtpServer, apiServer *api.Server) *Application {
 	return &Application{
+		apiServer:  apiServer,
 		smtpServer: smtpServer,
-		webServer:  webServer,
 	}
 }
