@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"container/list"
 	"go-fake-smtp/app/mailbox"
 	"go-fake-smtp/app/message"
 	"sync"
@@ -12,19 +13,19 @@ type Storage struct {
 	msgLock sync.RWMutex
 
 	// Contains list of all registered mailboxes.
-	mbxList []*mailbox.Mailbox
+	mbxList *list.List
 
-	// Maps mailbox ID to a list of IDs of all messages bound to that mailbox.
-	mbxMsgList map[string][]string
-
-	// Maps mailbox ID to mailbox itself.
-	mbxIdIndex map[string]*mailbox.Mailbox
-
-	// Maps message ID to message itself.
-	msgIdIndex map[string]*message.Message
+	// Maps mailbox ID to their respective list element.
+	mbxElems map[string]*list.Element
 
 	// Maps message ID to ID of the mailbox it is bound to.
 	msgMbxIndex map[string]string
+
+	// Maps mailbox ID to the list of messages belonging to it.
+	msgs map[string]*list.List
+
+	// Maps message IDs to their respective list elements.
+	msgElems map[string]*list.Element
 }
 
 // Add stores new message and binds it to mailbox with provided ID.
@@ -33,19 +34,17 @@ func (storage *Storage) Add(msg *message.Message, mailboxID string) {
 
 	mbx := storage.registerMailbox(mailboxID)
 
-	if _, ok := storage.msgIdIndex[msg.ID]; !ok {
-		storage.mbxMsgList[mbx.ID] = append(storage.mbxMsgList[mbx.ID], msg.ID)
+	if _, ok := storage.msgs[mailboxID]; !ok {
+		storage.msgMbxIndex[msg.ID] = mbx.ID
+		storage.msgElems[msg.ID] = storage.msgs[mailboxID].PushFront(msg)
 	}
-
-	storage.msgIdIndex[msg.ID] = msg
-	storage.msgMbxIndex[msg.ID] = mbx.ID
 
 	storage.msgLock.Unlock()
 }
 
 // CountMailboxes returns the number of registered mailboxes.
 func (storage *Storage) CountMailboxes() int {
-	return len(storage.mbxList)
+	return storage.mbxList.Len()
 }
 
 // CountMessages returns the number of stored messages bound to specified mailbox.
@@ -54,8 +53,10 @@ func (storage *Storage) CountMessages(mailboxId string) int {
 
 	var length int
 
-	if mbx, ok := storage.mbxIdIndex[mailboxId]; ok {
-		length = len(storage.mbxMsgList[mbx.ID])
+	if element, ok := storage.mbxElems[mailboxId]; ok {
+		if mbx, ok := element.Value.(mailbox.Mailbox); ok {
+			length = storage.msgs[mbx.ID].Len()
+		}
 	}
 
 	storage.mbxLock.RUnlock()
@@ -68,14 +69,20 @@ func (storage *Storage) DeleteMailbox(mailboxId string) {
 	storage.msgLock.Lock()
 	storage.mbxLock.Lock()
 
-	if mbx, ok := storage.mbxIdIndex[mailboxId]; ok {
-		for _, msgId := range storage.mbxMsgList[mailboxId] {
-			msg := storage.msgIdIndex[msgId]
+	if element, ok := storage.mbxElems[mailboxId]; ok {
+		if messages, ok := storage.msgs[mailboxId]; ok {
+			next := messages.Front()
 
-			storage.purgeMessage(msg)
+			for next != nil {
+				if m, ok := next.Value.(*message.Message); ok {
+					storage.purgeMessage(m)
+				}
+			}
 		}
 
-		storage.purgeMailbox(mbx)
+		if mbx, ok := element.Value.(*mailbox.Mailbox); ok {
+			storage.purgeMailbox(mbx)
+		}
 	}
 
 	storage.mbxLock.Unlock()
@@ -87,12 +94,17 @@ func (storage *Storage) DeleteMessage(messageId string) {
 	storage.msgLock.Lock()
 	storage.mbxLock.Lock()
 
-	if msg, ok := storage.msgIdIndex[messageId]; ok {
-		mbxId := storage.msgMbxIndex[msg.ID]
-		mbx := storage.mbxIdIndex[mbxId]
+	if element, ok := storage.msgElems[messageId]; ok {
+		if msg, ok := element.Value.(*message.Message); ok {
+			mbxId := storage.msgMbxIndex[msg.ID]
 
-		storage.purgeMessage(msg)
-		storage.purgeMailbox(mbx)
+			if element, ok := storage.mbxElems[mbxId]; ok {
+				if mbx, ok := element.Value.(*mailbox.Mailbox); ok {
+					storage.purgeMessage(msg)
+					storage.purgeMailbox(mbx)
+				}
+			}
+		}
 	}
 
 	storage.mbxLock.Unlock()
@@ -107,8 +119,10 @@ func (storage *Storage) GetMailbox(mailboxId string) *mailbox.Mailbox {
 
 	var mbx *mailbox.Mailbox
 
-	if v, ok := storage.mbxIdIndex[mailboxId]; ok {
-		mbx = v
+	if element, ok := storage.mbxElems[mailboxId]; ok {
+		if m, ok := element.Value.(*mailbox.Mailbox); ok {
+			mbx = m
+		}
 	}
 
 	storage.mbxLock.RUnlock()
@@ -120,8 +134,16 @@ func (storage *Storage) GetMailbox(mailboxId string) *mailbox.Mailbox {
 func (storage *Storage) GetMailboxes() []*mailbox.Mailbox {
 	storage.mbxLock.RLock()
 
-	mailboxes := make([]*mailbox.Mailbox, 0, len(storage.mbxList))
-	mailboxes = append(mailboxes, storage.mbxList...)
+	mailboxes := make([]*mailbox.Mailbox, 0, storage.mbxList.Len())
+	next := storage.mbxList.Front()
+
+	for next != nil {
+		if mbx, ok := next.Value.(*mailbox.Mailbox); ok {
+			mailboxes = append(mailboxes, mbx)
+		}
+
+		next = next.Next()
+	}
 
 	storage.mbxLock.RUnlock()
 
@@ -136,8 +158,10 @@ func (storage *Storage) GetMessage(messageId string) *message.Message {
 
 	var msg *message.Message
 
-	if v, ok := storage.msgIdIndex[messageId]; ok {
-		msg = v
+	if v, ok := storage.msgElems[messageId]; ok {
+		if m, ok := v.Value.(*message.Message); ok {
+			msg = m
+		}
 	}
 
 	storage.msgLock.RUnlock()
@@ -152,11 +176,16 @@ func (storage *Storage) GetMessages(mailboxId string) []*message.Message {
 
 	var result []*message.Message
 
-	if msgIdList, ok := storage.mbxMsgList[mailboxId]; ok {
-		result = make([]*message.Message, 0, len(msgIdList))
+	if messages, ok := storage.msgs[mailboxId]; ok {
+		result = make([]*message.Message, 0, messages.Len())
+		next := messages.Front()
 
-		for _, msgId := range msgIdList {
-			result = append(result, storage.msgIdIndex[msgId])
+		for next != nil {
+			if m, ok := next.Value.(*message.Message); ok {
+				result = append(result, m)
+			}
+
+			next = next.Next()
 		}
 	} else {
 		result = make([]*message.Message, 0)
@@ -174,15 +203,15 @@ func (storage *Storage) GetMessages(mailboxId string) []*message.Message {
 func (storage *Storage) registerMailbox(mailboxId string) *mailbox.Mailbox {
 	var mbx *mailbox.Mailbox
 
-	if v, ok := storage.mbxIdIndex[mailboxId]; ok {
-		mbx = v
+	if element, ok := storage.mbxElems[mailboxId]; ok {
+		if m, ok := element.Value.(*mailbox.Mailbox); ok {
+			mbx = m
+		}
 	} else {
 		mbx = mailbox.NewMailbox(mailboxId)
 
-		storage.mbxList = append(storage.mbxList, mbx)
-		storage.mbxIdIndex[mbx.ID] = mbx
-
-		storage.mbxMsgList[mbx.ID] = make([]string, 0, 1)
+		storage.mbxElems[mbx.ID] = storage.mbxList.PushBack(mbx)
+		storage.msgs[mailboxId] = list.New()
 	}
 
 	return mbx
@@ -192,41 +221,27 @@ func (storage *Storage) registerMailbox(mailboxId string) *mailbox.Mailbox {
 func (storage *Storage) purgeMessage(message *message.Message) {
 	mbxId := storage.msgMbxIndex[message.ID]
 
-	delete(storage.msgIdIndex, message.ID)
 	delete(storage.msgMbxIndex, message.ID)
 
-	for k, v := range storage.mbxMsgList[mbxId] {
-		if v == message.ID {
-			updatedMsgList := make([]string, 0, len(storage.mbxMsgList[mbxId])-1)
-			updatedMsgList = append(updatedMsgList, storage.mbxMsgList[mbxId][:k]...)
-			updatedMsgList = append(updatedMsgList, storage.mbxMsgList[mbxId][k+1:]...)
+	if element, ok := storage.msgElems[message.ID]; ok {
+		storage.msgs[mbxId].Remove(element)
 
-			storage.mbxMsgList[mbxId] = updatedMsgList
-
-			break
-		}
+		delete(storage.msgElems, message.ID)
 	}
 }
 
 // purgeMailbox deletes all traces of specified mailbox provided it has no registered messages.
 func (storage *Storage) purgeMailbox(mbx *mailbox.Mailbox) {
-	if len(storage.mbxMsgList[mbx.ID]) > 0 {
+	if messages, ok := storage.msgs[mbx.ID]; ok && messages.Len() > 0 {
 		return
 	}
 
-	delete(storage.mbxIdIndex, mbx.ID)
-	delete(storage.mbxMsgList, mbx.ID)
+	delete(storage.msgs, mbx.ID)
 
-	for k, v := range storage.mbxList {
-		if v.ID == mbx.ID {
-			updatedMbxList := make([]*mailbox.Mailbox, 0, len(storage.mbxList)-1)
-			updatedMbxList = append(updatedMbxList, storage.mbxList[:k]...)
-			updatedMbxList = append(updatedMbxList, storage.mbxList[k+1:]...)
+	if element, ok := storage.mbxElems[mbx.ID]; ok {
+		storage.mbxList.Remove(element)
 
-			storage.mbxList = updatedMbxList
-
-			break
-		}
+		delete(storage.mbxElems, mbx.ID)
 	}
 }
 
@@ -236,12 +251,12 @@ func NewStorage() *Storage {
 		mbxLock: sync.RWMutex{},
 		msgLock: sync.RWMutex{},
 
-		mbxList:    make([]*mailbox.Mailbox, 0),
-		mbxMsgList: make(map[string][]string),
+		mbxList:  list.New(),
+		mbxElems: make(map[string]*list.Element),
 
-		mbxIdIndex: make(map[string]*mailbox.Mailbox),
-
-		msgIdIndex:  make(map[string]*message.Message),
 		msgMbxIndex: make(map[string]string),
+
+		msgs:     make(map[string]*list.List),
+		msgElems: make(map[string]*list.Element),
 	}
 }
