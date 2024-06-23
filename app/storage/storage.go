@@ -32,14 +32,14 @@ type Storage struct {
 func (storage *Storage) Add(msg *message.Message, mailboxID string) {
 	storage.messageMutex.Lock()
 
+	defer storage.messageMutex.Unlock()
+
 	mbx := storage.registerMailbox(mailboxID)
 
 	if _, ok := storage.messageList[mailboxID]; !ok {
 		storage.messageMailboxIds[msg.ID] = mbx.ID
 		storage.messageElements[msg.ID] = storage.messageList[mailboxID].PushFront(msg)
 	}
-
-	storage.messageMutex.Unlock()
 }
 
 // CountMailboxes returns the number of registered mailboxes.
@@ -51,23 +51,24 @@ func (storage *Storage) CountMailboxes() int {
 func (storage *Storage) CountMessages(mailboxId string) int {
 	storage.mailboxMutex.RLock()
 
-	var length int
+	defer storage.mailboxMutex.RUnlock()
 
 	if element, ok := storage.mailboxElements[mailboxId]; ok {
 		if mbx, ok := element.Value.(mailbox.Mailbox); ok {
-			length = storage.messageList[mbx.ID].Len()
+			return storage.messageList[mbx.ID].Len()
 		}
 	}
 
-	storage.mailboxMutex.RUnlock()
-
-	return length
+	return 0
 }
 
 // DeleteMailbox deletes registered mailbox along with all its messages.
 func (storage *Storage) DeleteMailbox(mailboxId string) {
 	storage.messageMutex.Lock()
 	storage.mailboxMutex.Lock()
+
+	defer storage.messageMutex.Unlock()
+	defer storage.mailboxMutex.Unlock()
 
 	if element, ok := storage.mailboxElements[mailboxId]; ok {
 		if messages, ok := storage.messageList[mailboxId]; ok {
@@ -84,15 +85,15 @@ func (storage *Storage) DeleteMailbox(mailboxId string) {
 			storage.purgeMailbox(mbx)
 		}
 	}
-
-	storage.mailboxMutex.Unlock()
-	storage.messageMutex.Unlock()
 }
 
 // DeleteMessage deletes stored message.
 func (storage *Storage) DeleteMessage(messageId string) {
 	storage.messageMutex.Lock()
 	storage.mailboxMutex.Lock()
+
+	defer storage.messageMutex.Unlock()
+	defer storage.mailboxMutex.Unlock()
 
 	if element, ok := storage.messageElements[messageId]; ok {
 		if msg, ok := element.Value.(*message.Message); ok {
@@ -106,9 +107,6 @@ func (storage *Storage) DeleteMessage(messageId string) {
 			}
 		}
 	}
-
-	storage.mailboxMutex.Unlock()
-	storage.messageMutex.Unlock()
 }
 
 // GetMailbox returns registered mailbox.
@@ -117,35 +115,37 @@ func (storage *Storage) DeleteMessage(messageId string) {
 func (storage *Storage) GetMailbox(mailboxId string) *mailbox.Mailbox {
 	storage.mailboxMutex.RLock()
 
-	var mbx *mailbox.Mailbox
+	defer storage.mailboxMutex.RUnlock()
 
 	if element, ok := storage.mailboxElements[mailboxId]; ok {
 		if m, ok := element.Value.(*mailbox.Mailbox); ok {
-			mbx = m
+			return m
 		}
 	}
 
-	storage.mailboxMutex.RUnlock()
-
-	return mbx
+	return nil
 }
 
 // GetMailboxes returns a list of all registered mailboxes.
 func (storage *Storage) GetMailboxes() []*mailbox.Mailbox {
 	storage.mailboxMutex.RLock()
 
-	mailboxes := make([]*mailbox.Mailbox, 0, storage.mailboxList.Len())
-	next := storage.mailboxList.Front()
+	defer storage.mailboxMutex.RUnlock()
 
-	for next != nil {
-		if mbx, ok := next.Value.(*mailbox.Mailbox); ok {
-			mailboxes = append(mailboxes, mbx)
+	var mailboxes []*mailbox.Mailbox
+
+	if storage.mailboxList.Len() > 0 {
+		mailboxes = make([]*mailbox.Mailbox, 0, storage.mailboxList.Len())
+		next := storage.mailboxList.Front()
+
+		for next != nil {
+			if mbx, ok := next.Value.(*mailbox.Mailbox); ok {
+				mailboxes = append(mailboxes, mbx)
+			}
+
+			next = next.Next()
 		}
-
-		next = next.Next()
 	}
-
-	storage.mailboxMutex.RUnlock()
 
 	return mailboxes
 }
@@ -156,23 +156,24 @@ func (storage *Storage) GetMailboxes() []*mailbox.Mailbox {
 func (storage *Storage) GetMessage(messageId string) *message.Message {
 	storage.messageMutex.RLock()
 
-	var msg *message.Message
+	defer storage.messageMutex.RUnlock()
 
 	if v, ok := storage.messageElements[messageId]; ok {
 		if m, ok := v.Value.(*message.Message); ok {
-			msg = m
+			return m
 		}
 	}
 
-	storage.messageMutex.RUnlock()
-
-	return msg
+	return nil
 }
 
 // GetMessages returns a list of all known messages bound to specified mailbox.
 func (storage *Storage) GetMessages(mailboxId string) []*message.Message {
 	storage.mailboxMutex.RLock()
 	storage.messageMutex.RLock()
+
+	defer storage.mailboxMutex.RUnlock()
+	defer storage.messageMutex.RUnlock()
 
 	var result []*message.Message
 
@@ -187,12 +188,7 @@ func (storage *Storage) GetMessages(mailboxId string) []*message.Message {
 
 			next = next.Next()
 		}
-	} else {
-		result = make([]*message.Message, 0)
 	}
-
-	storage.messageMutex.RUnlock()
-	storage.mailboxMutex.RUnlock()
 
 	return result
 }
@@ -205,14 +201,14 @@ func (storage *Storage) registerMailbox(mailboxId string) *mailbox.Mailbox {
 
 	if element, ok := storage.mailboxElements[mailboxId]; ok {
 		if m, ok := element.Value.(*mailbox.Mailbox); ok {
-			mbx = m
+			return m
 		}
-	} else {
-		mbx = mailbox.NewMailbox(mailboxId)
-
-		storage.mailboxElements[mbx.ID] = storage.mailboxList.PushBack(mbx)
-		storage.messageList[mailboxId] = list.New()
 	}
+
+	mbx = mailbox.NewMailbox(mailboxId)
+
+	storage.mailboxElements[mbx.ID] = storage.mailboxList.PushBack(mbx)
+	storage.messageList[mailboxId] = list.New()
 
 	return mbx
 }
