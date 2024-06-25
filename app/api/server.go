@@ -3,14 +3,14 @@ package api
 import (
 	"context"
 	"errors"
-	context2 "go-fake-smtp/app/api/context"
-	"go-fake-smtp/app/api/mailbox"
-	"go-fake-smtp/app/api/message"
-	"go-fake-smtp/app/storage"
 	"log"
 	"net/http"
 	"sync"
 	"time"
+	context2 "zinktray/app/api/context"
+	"zinktray/app/api/mailbox"
+	"zinktray/app/api/message"
+	"zinktray/app/storage"
 )
 
 // Server structure represents HTTP API server.

@@ -1,7 +1,7 @@
 package context
 
 import (
-	"go-fake-smtp/app/storage"
+	"zinktray/app/storage"
 )
 
 type RequestHandlerContext struct {

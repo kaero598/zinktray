@@ -1,4 +1,4 @@
-# Fake SMTP Server
+# ZinkTray
 
 This application provides basic SMTP server functionality for email testing.
 All emails sent are stored in memory and may be retrieved via API.
@@ -18,7 +18,7 @@ To launch the application use `go run` command:
 $ go run .
 ```
 
-Or use `go build` and execute `go-fake-smtp` binary.
+Or use `go build` and execute `zinktray` binary.
 
 No configuration options are exposed yet.
 

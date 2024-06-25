@@ -2,10 +2,10 @@ package message
 
 import (
 	"encoding/json"
-	"go-fake-smtp/app/api/context"
-	"go-fake-smtp/app/message/parse"
 	"log"
 	"net/http"
+	"zinktray/app/api/context"
+	"zinktray/app/message/parse"
 )
 
 // GetMessageListHandler creates handler for message list retrieval API.

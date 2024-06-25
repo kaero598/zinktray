@@ -1,8 +1,8 @@
 package mailbox
 
 import (
-	"go-fake-smtp/app/api/context"
 	"net/http"
+	"zinktray/app/api/context"
 )
 
 // DeleteMailboxHandler creates handler for mailbox deletion API.

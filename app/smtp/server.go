@@ -2,10 +2,10 @@ package smtp
 
 import (
 	"context"
-	"go-fake-smtp/app/storage"
 	"log"
 	"sync"
 	"time"
+	"zinktray/app/storage"
 
 	"github.com/emersion/go-smtp"
 )
@@ -31,7 +31,7 @@ func (srv *SmtpServer) Start(ctx context.Context, waitGroup *sync.WaitGroup) {
 	server := smtp.NewServer(backend)
 
 	server.Addr = ":2525"
-	server.Domain = "fake"
+	server.Domain = "zinktray"
 	server.ReadTimeout = 30 * time.Second
 	server.WriteTimeout = 30 * time.Second
 	server.AllowInsecureAuth = true

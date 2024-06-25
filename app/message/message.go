@@ -3,10 +3,10 @@ package message
 import (
 	"bytes"
 	"compress/gzip"
-	"go-fake-smtp/app/id"
 	"io"
 	"strings"
 	"time"
+	"zinktray/app/id"
 )
 
 // Message structure represents information on individual message.

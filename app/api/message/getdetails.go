@@ -2,10 +2,10 @@ package message
 
 import (
 	"encoding/json"
-	"go-fake-smtp/app/api/context"
-	"go-fake-smtp/app/message/parse"
 	"log"
 	"net/http"
+	"zinktray/app/api/context"
+	"zinktray/app/message/parse"
 )
 
 // Returns JSON-formatted details of stored message.

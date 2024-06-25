@@ -1,9 +1,9 @@
 package smtp
 
 import (
-	"go-fake-smtp/app/message"
-	"go-fake-smtp/app/storage"
 	"io"
+	"zinktray/app/message"
+	"zinktray/app/storage"
 
 	"github.com/emersion/go-smtp"
 )

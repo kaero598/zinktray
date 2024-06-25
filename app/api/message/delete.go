@@ -1,8 +1,8 @@
 package message
 
 import (
-	"go-fake-smtp/app/api/context"
 	"net/http"
+	"zinktray/app/api/context"
 )
 
 // DeleteMessageHandler creates handler for message deletion API.

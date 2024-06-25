@@ -2,9 +2,9 @@ package mailbox
 
 import (
 	"encoding/json"
-	"go-fake-smtp/app/api/context"
 	"log"
 	"net/http"
+	"zinktray/app/api/context"
 )
 
 func GetMailboxListHandler(context *context.RequestHandlerContext) http.HandlerFunc {

@@ -1,4 +1,4 @@
-module go-fake-smtp
+module zinktray
 
 go 1.17
 

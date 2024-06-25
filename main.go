@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"go-fake-smtp/app"
-	"go-fake-smtp/app/api"
-	"go-fake-smtp/app/smtp"
-	"go-fake-smtp/app/storage"
+	"zinktray/app"
+	"zinktray/app/api"
+	"zinktray/app/smtp"
+	"zinktray/app/storage"
 )
 
 func main() {

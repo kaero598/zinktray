@@ -2,9 +2,9 @@ package storage
 
 import (
 	"container/list"
-	"go-fake-smtp/app/mailbox"
-	"go-fake-smtp/app/message"
 	"sync"
+	"zinktray/app/mailbox"
+	"zinktray/app/message"
 )
 
 // Storage represents central storage for everything mail.

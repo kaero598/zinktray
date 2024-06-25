@@ -2,12 +2,12 @@ package app
 
 import (
 	"context"
-	"go-fake-smtp/app/api"
-	"go-fake-smtp/app/smtp"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+	"zinktray/app/api"
+	"zinktray/app/smtp"
 )
 
 // Application represents the application itself.
