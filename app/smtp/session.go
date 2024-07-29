@@ -1,12 +1,16 @@
 package smtp
 
 import (
+	"errors"
 	"io"
+	"log"
 	"zinktray/app/message"
 	"zinktray/app/storage"
 
 	"github.com/emersion/go-smtp"
 )
+
+var errInternal = errors.New("internal error")
 
 // smtpSession represents information on individual SMTP session.
 type smtpSession struct {
@@ -36,7 +40,11 @@ func (session *smtpSession) Data(reader io.Reader) error {
 	} else {
 		msg := message.NewMessage(string(buffer))
 
-		session.store.Add(msg, session.mailboxName)
+		if err := session.store.Add(msg, session.mailboxName); err != nil {
+			log.Printf("Cannot store message: %s", err)
+
+			return errInternal
+		}
 	}
 
 	return nil

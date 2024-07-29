@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"testing"
 	"time"
 	"zinktray/app/message"
@@ -51,6 +52,63 @@ func TestAdd(t *testing.T) {
 
 	if msg != msgExpected {
 		t.Fatalf("Message \"%s\" is not the same as the one added", msgExpected.ID)
+	}
+}
+
+func TestAddDuplicate(t *testing.T) {
+	var storage = NewStorage()
+
+	var mboxID_1 = "mailbox_1"
+	var mboxID_2 = "mailbox_2"
+	var msgID = "message_1"
+
+	var msgCount = storage.CountMessages(mboxID_1)
+	var msgCountExpected = 0
+
+	if msgCount != msgCountExpected {
+		t.Fatalf("Message count is wrong: got %d, expected %d", msgCount, msgCountExpected)
+	}
+
+	var err error
+	var msg_1 = &message.Message{ID: msgID, ReceivedAt: time.Time{}}
+	var msg_2 = &message.Message{ID: msgID, ReceivedAt: time.Time{}}
+
+	err = storage.Add(msg_1, mboxID_1)
+
+	if err != nil {
+		t.Fatalf("Unexpected error upon adding message: %s", err)
+	}
+
+	msgCount = storage.CountMessages(mboxID_1)
+	msgCountExpected = 1
+
+	if msgCount != msgCountExpected {
+		t.Fatalf("Message count is wrong: got %d, expected %d", msgCount, msgCountExpected)
+	}
+
+	err = storage.Add(msg_2, mboxID_2)
+
+	if err == nil {
+		t.Fatal("Unexpected adding result: expected error, got nil")
+	} else if !errors.Is(err, ErrDuplicate) {
+		t.Fatalf("Unexpected error: expected \"%s\", got \"%s\"", ErrDuplicate, err)
+	}
+
+	msgCount = storage.CountMessages(mboxID_1)
+	msgCountExpected = 1
+
+	if msgCount != msgCountExpected {
+		t.Fatalf("Message count is wrong: got %d, expected %d", msgCount, msgCountExpected)
+	}
+
+	var msg = storage.GetMessage(msgID)
+
+	if msg == nil {
+		t.Fatalf("Message \"%s\" not found", msgID)
+	}
+
+	if msg != msg_1 {
+		t.Fatalf("Message \"%s\" is not the same as the one added", msgID)
 	}
 }
 

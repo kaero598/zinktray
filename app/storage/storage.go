@@ -2,10 +2,15 @@ package storage
 
 import (
 	"container/list"
+	"errors"
 	"sync"
 	"zinktray/app/mailbox"
 	"zinktray/app/message"
 )
+
+// ErrDuplicate error can be returned upon adding a message
+// when another message with such ID is aready present in the storage in any mailbox.
+var ErrDuplicate = errors.New("message with such ID already exists")
 
 // Storage represents central storage for everything mail.
 type Storage struct {
@@ -29,15 +34,22 @@ type Storage struct {
 }
 
 // Add stores new message and binds it to mailbox with provided ID.
-func (storage *Storage) Add(msg *message.Message, mailboxID string) {
+// Returns ErrDuplicate error upon adding message with an ID that is already present in the storage in any mailbox.
+func (storage *Storage) Add(msg *message.Message, mailboxID string) error {
 	storage.messageMutex.Lock()
 
 	defer storage.messageMutex.Unlock()
+
+	if _, ok := storage.messageElements[msg.ID]; ok {
+		return ErrDuplicate
+	}
 
 	mbx := storage.registerMailbox(mailboxID)
 
 	storage.messageMailboxIds[msg.ID] = mbx.ID
 	storage.messageElements[msg.ID] = storage.messageList[mailboxID].PushFront(msg)
+
+	return nil
 }
 
 // CountMailboxes returns the number of registered mailboxes.
