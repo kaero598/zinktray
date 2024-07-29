@@ -36,10 +36,8 @@ func (storage *Storage) Add(msg *message.Message, mailboxID string) {
 
 	mbx := storage.registerMailbox(mailboxID)
 
-	if _, ok := storage.messageList[mailboxID]; !ok {
-		storage.messageMailboxIds[msg.ID] = mbx.ID
-		storage.messageElements[msg.ID] = storage.messageList[mailboxID].PushFront(msg)
-	}
+	storage.messageMailboxIds[msg.ID] = mbx.ID
+	storage.messageElements[msg.ID] = storage.messageList[mailboxID].PushFront(msg)
 }
 
 // CountMailboxes returns the number of registered mailboxes.
@@ -54,7 +52,7 @@ func (storage *Storage) CountMessages(mailboxId string) int {
 	defer storage.mailboxMutex.RUnlock()
 
 	if element, ok := storage.mailboxElements[mailboxId]; ok {
-		if mbx, ok := element.Value.(mailbox.Mailbox); ok {
+		if mbx, ok := element.Value.(*mailbox.Mailbox); ok {
 			return storage.messageList[mbx.ID].Len()
 		}
 	}
@@ -78,6 +76,8 @@ func (storage *Storage) DeleteMailbox(mailboxId string) {
 				if m, ok := next.Value.(*message.Message); ok {
 					storage.purgeMessage(m)
 				}
+
+				next = next.Next()
 			}
 		}
 
