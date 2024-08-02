@@ -1,0 +1,11 @@
+Return-Path: <>
+Subject: Test
+To: x@x.x, =?UTF-8?b?0KXRgNC10L3RjCDQutCw0LrQsNGPLdGC0L4=?= <y@y.y>
+From: "A-b-c" a@b.c
+Cc: =?UTF-8?b?0KXRgNC10L3RjCDQutCw0LrQsNGPLdGC0L4=?= <d@e.f>
+X-Priority: normal
+X-My-Custom-Header: noop1
+X-My-Custom-Header: noop2
+Content-Type: text/html; charset=utf-8
+
+<h1>This is HTML content.</h1>
