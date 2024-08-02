@@ -1,5 +1,7 @@
 # ZinkTray
 
+[![Test](https://github.com/kaero598/zinktray/actions/workflows/go.yml/badge.svg)](https://github.com/kaero598/zinktray/actions/workflows/go.yml)
+
 This application provides basic SMTP server functionality for email testing.
 All emails sent are stored in memory and may be retrieved via API.
 
