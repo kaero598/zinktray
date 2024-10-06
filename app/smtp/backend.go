@@ -13,22 +13,9 @@ type smtpBackend struct {
 	store *storage.Storage
 }
 
-// AnonymousLogin creates a new session for clients without authentication.
-//
-// Anonymous session is operating a built-in anonymous mailbox.
-func (backend *smtpBackend) AnonymousLogin(_ *smtp.ConnectionState) (smtp.Session, error) {
+func (b *smtpBackend) NewSession(c *smtp.Conn) (smtp.Session, error) {
 	return &smtpSession{
-		store:       backend.store,
+		store:       b.store,
 		mailboxName: mailbox.Anonymous,
-	}, nil
-}
-
-// Login creates a new session for authenticated clients.
-//
-// Authenticated username is used as a name for operated mailbox.
-func (backend *smtpBackend) Login(_ *smtp.ConnectionState, username string, _ string) (smtp.Session, error) {
-	return &smtpSession{
-		store:       backend.store,
-		mailboxName: username,
 	}, nil
 }

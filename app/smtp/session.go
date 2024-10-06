@@ -7,6 +7,7 @@ import (
 	"zinktray/app/message"
 	"zinktray/app/storage"
 
+	"github.com/emersion/go-sasl"
 	"github.com/emersion/go-smtp"
 )
 
@@ -24,12 +25,12 @@ type smtpSession struct {
 	mailboxName string
 }
 
-func (session *smtpSession) Mail(_ string, _ smtp.MailOptions) error {
+func (session *smtpSession) Mail(_ string, _ *smtp.MailOptions) error {
 	// Allow any "FROM" address (even malformed) since it is not used in any way.
 	return nil
 }
 
-func (session *smtpSession) Rcpt(_ string) error {
+func (session *smtpSession) Rcpt(_ string, _ *smtp.RcptOptions) error {
 	// Allow any "RCPT" address (even malformed) since it is not used in any way.
 	return nil
 }
@@ -57,4 +58,18 @@ func (session *smtpSession) Reset() {
 func (session *smtpSession) Logout() error {
 	// Nothing to clean-up.
 	return nil
+}
+
+func (session *smtpSession) Auth(mech string) (sasl.Server, error) {
+	var authenticator = func(identity string, username string, password string) error {
+		session.mailboxName = username
+
+		return nil
+	}
+
+	return sasl.NewPlainServer(authenticator), nil
+}
+
+func (session *smtpSession) AuthMechanisms() []string {
+	return []string{sasl.Plain}
 }
