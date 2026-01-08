@@ -39,9 +39,10 @@ func (session *smtpSession) Data(reader io.Reader) error {
 	if buffer, err := io.ReadAll(reader); err != nil {
 		return err
 	} else {
+		mbox := session.store.AddMailbox(session.mailboxName)
 		msg := message.NewMessage(string(buffer))
 
-		if err := session.store.Add(msg, session.mailboxName); err != nil {
+		if err := session.store.AddMessage(msg, mbox.ID); err != nil {
 			log.Printf("Cannot store message: %s", err)
 
 			return errInternal

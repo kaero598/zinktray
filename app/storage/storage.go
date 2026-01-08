@@ -8,9 +8,12 @@ import (
 	"zinktray/app/message"
 )
 
-// ErrDuplicate error can be returned upon adding a message
-// when another message with such ID is aready present in the storage in any mailbox.
+// ErrDuplicate error can be returned upon adding a message when another message with such ID is aready present
+// in the storage in any mailbox.
 var ErrDuplicate = errors.New("message with such ID already exists")
+
+// ErrMailboxNotRegistered can be returned upon adding a message to a mailbox that is not yet registered.
+var ErrMailboxNotRegistered = errors.New("mailbox is not registered")
 
 // Storage represents central storage for everything mail.
 type Storage struct {
@@ -20,34 +23,75 @@ type Storage struct {
 	// Contains list of all registered mailboxes.
 	mailboxList *list.List
 
-	// Maps mailbox IDs to their respective list elements.
+	// Maps mailbox ID to its respective list element.
 	mailboxElements map[string]*list.Element
 
-	// Maps mailbox IDs to the list of messages belonging to them.
-	messageList map[string]*list.List
+	// Contains list of all registered messages.
+	messageList *list.List
 
-	// Maps message IDs to their respective list elements.
+	// Maps message ID to its respective list element.
 	messageElements map[string]*list.Element
 
-	// Maps message IDs to IDs of mailboxes they belong to.
-	messageMailboxIds map[string]string
+	// Maps mailbox ID to a list of message IDs belonging to this mailbox.
+	mailboxMessageIDs map[string]*list.List
+
+	// Maps message ID to its respective list element inside mailbox it belongs to.
+	mailboxMessageIDElements map[string]*list.Element
+
+	// Maps message ID to ID of mailbox it belongs to.
+	messageMailboxIDs map[string]string
 }
 
-// Add stores new message and binds it to mailbox with provided ID.
-// Returns ErrDuplicate error upon adding message with an ID that is already present in the storage in any mailbox.
-func (storage *Storage) Add(msg *message.Message, mailboxID string) error {
-	storage.messageMutex.Lock()
+// AddMailbox registers mailbox ID and returns corresponding mailbox.
+//
+// When mailbox ID is already registered returns that mailbox.
+func (storage *Storage) AddMailbox(mailboxId string) *mailbox.Mailbox {
+	storage.mailboxMutex.Lock()
 
+	defer storage.mailboxMutex.Unlock()
+
+	var mbx *mailbox.Mailbox
+
+	if element, ok := storage.mailboxElements[mailboxId]; ok {
+		if m, ok := element.Value.(*mailbox.Mailbox); ok {
+			return m
+		}
+	}
+
+	mbx = mailbox.NewMailbox(mailboxId)
+
+	storage.mailboxElements[mbx.ID] = storage.mailboxList.PushBack(mbx)
+	storage.mailboxMessageIDs[mailboxId] = list.New()
+
+	return mbx
+}
+
+// AddMessage stores new message and binds it to mailbox with provided ID.
+// Returns ErrDuplicate error upon adding message with an ID that is already present in the storage in any mailbox.
+func (storage *Storage) AddMessage(msg *message.Message, mailboxID string) error {
+	storage.messageMutex.Lock()
+	storage.mailboxMutex.RLock()
+
+	defer storage.mailboxMutex.RUnlock()
 	defer storage.messageMutex.Unlock()
+
+	element, ok := storage.mailboxElements[mailboxID]
+	if !ok {
+		return ErrMailboxNotRegistered
+	}
+
+	mbx, ok := element.Value.(*mailbox.Mailbox)
+	if !ok {
+		return ErrMailboxNotRegistered
+	}
 
 	if _, ok := storage.messageElements[msg.ID]; ok {
 		return ErrDuplicate
 	}
 
-	mbx := storage.registerMailbox(mailboxID)
-
-	storage.messageMailboxIds[msg.ID] = mbx.ID
-	storage.messageElements[msg.ID] = storage.messageList[mailboxID].PushFront(msg)
+	storage.messageElements[msg.ID] = storage.messageList.PushFront(msg)
+	storage.mailboxMessageIDElements[msg.ID] = storage.mailboxMessageIDs[mailboxID].PushFront(msg.ID)
+	storage.messageMailboxIDs[msg.ID] = mbx.ID
 
 	return nil
 }
@@ -65,7 +109,7 @@ func (storage *Storage) CountMessages(mailboxId string) int {
 
 	if element, ok := storage.mailboxElements[mailboxId]; ok {
 		if mbx, ok := element.Value.(*mailbox.Mailbox); ok {
-			return storage.messageList[mbx.ID].Len()
+			return storage.mailboxMessageIDs[mbx.ID].Len()
 		}
 	}
 
@@ -73,51 +117,63 @@ func (storage *Storage) CountMessages(mailboxId string) int {
 }
 
 // DeleteMailbox deletes registered mailbox along with all its messages.
-func (storage *Storage) DeleteMailbox(mailboxId string) {
+func (storage *Storage) DeleteMailbox(mailboxID string) {
 	storage.messageMutex.Lock()
 	storage.mailboxMutex.Lock()
 
 	defer storage.messageMutex.Unlock()
 	defer storage.mailboxMutex.Unlock()
 
-	if element, ok := storage.mailboxElements[mailboxId]; ok {
-		if messages, ok := storage.messageList[mailboxId]; ok {
-			next := messages.Front()
+	if msgIDList, ok := storage.mailboxMessageIDs[mailboxID]; ok {
+		next := msgIDList.Front()
 
-			for next != nil {
-				if m, ok := next.Value.(*message.Message); ok {
-					storage.purgeMessage(m)
+		for next != nil {
+			if messageID, ok := next.Value.(string); ok {
+				delete(storage.mailboxMessageIDElements, messageID)
+				delete(storage.messageMailboxIDs, messageID)
+
+				if element, ok := storage.messageElements[messageID]; ok {
+					storage.messageList.Remove(element)
+
+					delete(storage.messageElements, messageID)
 				}
-
-				next = next.Next()
 			}
+
+			next = next.Next()
 		}
 
-		if mbx, ok := element.Value.(*mailbox.Mailbox); ok {
-			storage.purgeMailbox(mbx)
-		}
+		delete(storage.mailboxMessageIDs, mailboxID)
+	}
+
+	if element, ok := storage.mailboxElements[mailboxID]; ok {
+		storage.mailboxList.Remove(element)
+
+		delete(storage.mailboxElements, mailboxID)
 	}
 }
 
 // DeleteMessage deletes stored message.
-func (storage *Storage) DeleteMessage(messageId string) {
+func (storage *Storage) DeleteMessage(messageID string) {
 	storage.messageMutex.Lock()
 	storage.mailboxMutex.Lock()
 
 	defer storage.messageMutex.Unlock()
 	defer storage.mailboxMutex.Unlock()
 
-	if element, ok := storage.messageElements[messageId]; ok {
-		if msg, ok := element.Value.(*message.Message); ok {
-			mbxId := storage.messageMailboxIds[msg.ID]
+	if mailboxID, ok := storage.messageMailboxIDs[messageID]; ok {
+		if element, ok := storage.mailboxMessageIDElements[mailboxID]; ok {
+			storage.mailboxMessageIDs[mailboxID].Remove(element)
 
-			if element, ok := storage.mailboxElements[mbxId]; ok {
-				if mbx, ok := element.Value.(*mailbox.Mailbox); ok {
-					storage.purgeMessage(msg)
-					storage.purgeMailbox(mbx)
-				}
-			}
+			delete(storage.mailboxMessageIDElements, messageID)
 		}
+
+		delete(storage.messageMailboxIDs, messageID)
+	}
+
+	if element, ok := storage.messageElements[messageID]; ok {
+		storage.messageList.Remove(element)
+
+		delete(storage.messageElements, messageID)
 	}
 }
 
@@ -138,7 +194,7 @@ func (storage *Storage) GetMailbox(mailboxId string) *mailbox.Mailbox {
 	return nil
 }
 
-// GetMailboxes returns a list of all registered mailboxes.
+// GetMailboxes returns a slice of all registered mailboxes.
 func (storage *Storage) GetMailboxes() []*mailbox.Mailbox {
 	storage.mailboxMutex.RLock()
 
@@ -170,8 +226,8 @@ func (storage *Storage) GetMessage(messageId string) *message.Message {
 
 	defer storage.messageMutex.RUnlock()
 
-	if v, ok := storage.messageElements[messageId]; ok {
-		if m, ok := v.Value.(*message.Message); ok {
+	if element, ok := storage.messageElements[messageId]; ok {
+		if m, ok := element.Value.(*message.Message); ok {
 			return m
 		}
 	}
@@ -189,13 +245,17 @@ func (storage *Storage) GetMessages(mailboxId string) []*message.Message {
 
 	var result []*message.Message
 
-	if messages, ok := storage.messageList[mailboxId]; ok {
-		result = make([]*message.Message, 0, messages.Len())
-		next := messages.Front()
+	if l, ok := storage.mailboxMessageIDs[mailboxId]; ok {
+		result = make([]*message.Message, 0, l.Len())
+		next := l.Front()
 
 		for next != nil {
-			if m, ok := next.Value.(*message.Message); ok {
-				result = append(result, m)
+			if msgID, ok := next.Value.(string); ok {
+				if element, ok := storage.messageElements[msgID]; ok {
+					if msg, ok := element.Value.(*message.Message); ok {
+						result = append(result, msg)
+					}
+				}
 			}
 
 			next = next.Next()
@@ -203,54 +263,6 @@ func (storage *Storage) GetMessages(mailboxId string) []*message.Message {
 	}
 
 	return result
-}
-
-// registerMailbox registers mailbox ID and returns corresponding mailbox.
-//
-// When mailbox ID is already registered returns that mailbox.
-func (storage *Storage) registerMailbox(mailboxId string) *mailbox.Mailbox {
-	var mbx *mailbox.Mailbox
-
-	if element, ok := storage.mailboxElements[mailboxId]; ok {
-		if m, ok := element.Value.(*mailbox.Mailbox); ok {
-			return m
-		}
-	}
-
-	mbx = mailbox.NewMailbox(mailboxId)
-
-	storage.mailboxElements[mbx.ID] = storage.mailboxList.PushBack(mbx)
-	storage.messageList[mailboxId] = list.New()
-
-	return mbx
-}
-
-// purgeMessage deletes all traces of specified message.
-func (storage *Storage) purgeMessage(message *message.Message) {
-	mbxId := storage.messageMailboxIds[message.ID]
-
-	delete(storage.messageMailboxIds, message.ID)
-
-	if element, ok := storage.messageElements[message.ID]; ok {
-		storage.messageList[mbxId].Remove(element)
-
-		delete(storage.messageElements, message.ID)
-	}
-}
-
-// purgeMailbox deletes all traces of specified mailbox provided it has no registered messages.
-func (storage *Storage) purgeMailbox(mbx *mailbox.Mailbox) {
-	if messages, ok := storage.messageList[mbx.ID]; ok && messages.Len() > 0 {
-		return
-	}
-
-	delete(storage.messageList, mbx.ID)
-
-	if element, ok := storage.mailboxElements[mbx.ID]; ok {
-		storage.mailboxList.Remove(element)
-
-		delete(storage.mailboxElements, mbx.ID)
-	}
 }
 
 // NewStorage creates new central storage structure.
@@ -262,9 +274,12 @@ func NewStorage() *Storage {
 		mailboxList:     list.New(),
 		mailboxElements: make(map[string]*list.Element),
 
-		messageList:     make(map[string]*list.List),
+		messageList:     list.New(),
 		messageElements: make(map[string]*list.Element),
 
-		messageMailboxIds: make(map[string]string),
+		mailboxMessageIDs:        make(map[string]*list.List),
+		mailboxMessageIDElements: make(map[string]*list.Element),
+
+		messageMailboxIDs: make(map[string]string),
 	}
 }
