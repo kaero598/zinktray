@@ -1,7 +1,6 @@
 package smtp
 
 import (
-	"zinktray/app/mailbox"
 	"zinktray/app/storage"
 
 	"github.com/emersion/go-smtp"
@@ -15,7 +14,6 @@ type smtpBackend struct {
 
 func (b *smtpBackend) NewSession(c *smtp.Conn) (smtp.Session, error) {
 	return &smtpSession{
-		store:       b.store,
-		mailboxName: mailbox.Anonymous,
+		store: b.store,
 	}, nil
 }

@@ -11,16 +11,15 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"zinktray/app/mailbox"
 	"zinktray/app/storage"
 )
 
 var defaultURL = "127.0.0.1:2525"
 
 var mailboxes = []string{
-	"",
 	"test1",
 	"test2",
+	"test3",
 }
 
 var messages = []messageSource{
@@ -43,10 +42,20 @@ type messageSource struct {
 }
 
 func TestSmtp(t *testing.T) {
-	var storage = storage.NewStorage()
-	var cancel = newServer(storage)
+	var store = storage.NewStorage()
+	var cancel = newServer(store)
 
 	t.Cleanup(cancel)
+
+	t.Run("auth", func(t *testing.T) {
+		client := newClient()
+
+		defer client.Close()
+
+		if err := client.Mail("test@localhost"); err == nil {
+			t.Fatal("Command should have failed without authentication")
+		}
+	})
 
 	var msg messageSource
 
@@ -80,12 +89,10 @@ func TestSmtp(t *testing.T) {
 
 			defer client.Close()
 
-			if msg.username != "" {
-				var auth = smtp.PlainAuth("", msg.username, "", "127.0.0.1")
+			var auth = smtp.PlainAuth("", msg.username, "", "127.0.0.1")
 
-				if err := client.Auth(auth); err != nil {
-					t.Fatalf("Cannot authenticate: %s", err)
-				}
+			if err := client.Auth(auth); err != nil {
+				t.Fatalf("Cannot authenticate: %s", err)
 			}
 
 			err = client.Mail("test@localhost")
@@ -127,11 +134,7 @@ func TestSmtp(t *testing.T) {
 	}
 
 	for mboxID, msgCountExpected := range messagesCount {
-		if mboxID == "" {
-			mboxID = mailbox.Anonymous
-		}
-
-		var msgCount = storage.CountMessages(mboxID)
+		var msgCount = store.CountMessages(mboxID)
 
 		if msgCount != msgCountExpected {
 			t.Fatalf(
@@ -167,7 +170,7 @@ func newClient() *smtp.Client {
 			return client
 		}
 
-		time.Sleep(50 * time.Microsecond)
+		time.Sleep(150 * time.Microsecond)
 	}
 
 	panic(fmt.Sprintf("Cannot dial %s: %s", defaultURL, err))
